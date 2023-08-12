@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 from gitscan.scanner import scanner
+from tests import test_helpers
 
 
 class TestExtractRepoName(unittest.TestCase):
@@ -31,11 +32,11 @@ class TestExtractRepoName(unittest.TestCase):
 class TestReadRepo(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.path_to_git = "/home/e/Desktop/data/clean_repo/.git"
-        # create the git repo
-        # do the steps
-        self.expected_info = {'name': 'clean_repo',
-                              'path': Path('/home/e/Desktop/data'),
+        self.repo_name = "testrepo"
+        self.repo_base_dir = test_helpers.create_temp_git_repo(self.repo_name)
+        self.path_to_git = self.repo_base_dir / self.repo_name / ".git"
+        self.expected_info = {'name': self.repo_name,
+                              'path': self.repo_base_dir,
                               'bare': False,
                               'remote_count': 0,
                               'branch_count': 2,
@@ -44,7 +45,7 @@ class TestReadRepo(unittest.TestCase):
                               'index_changes': False,
                               'working_tree_changes': False,
                               'stash': True,
-                              'branch_name': 'master',
+                              'branch_name': 'main',
                               'detached_head': False,
                               'ahead_count': 0,
                               'behind_count': 0,
@@ -52,8 +53,7 @@ class TestReadRepo(unittest.TestCase):
                               }
 
     def tearDown(self) -> None:
-        # delete the git repo
-        ...
+        test_helpers.delete_temp_directory(self.repo_base_dir)
 
     def test_with_Path(self) -> None:
         info: dict[str, Any] = scanner.read_repo(self.path_to_git)
