@@ -5,50 +5,47 @@ import time
 from git import Repo  # type: ignore
 
 
-def create_temp_git_repo(repo_name: str) -> Path:
+def create_temp_git_repo(repo_name: str, commit_count: int,
+                         extra_branches: list[str],
+                         tag_count: int, stash: bool,
+                         active_branch: str) -> Path:
     """Create a git repo in a temporary directory"""
     temp_base_dir = Path(tempfile.mkdtemp())
     repo_dir = temp_base_dir / repo_name
     repo = Repo.init(repo_dir)
     repo.git.checkout(b='main')
 
-    # Create text files in the repository
-    file_names = ['file1.txt', 'file2.txt', 'file3.txt',
-                  'file4.txt', 'file5.txt']
-    for file_name in file_names:
+    # Create and commit text files in the repository
+    for i in range(1, commit_count + 1):
+        file_name = f'file{i}.txt'
         file_path = repo_dir / file_name
         with open(file_path, 'w') as file:
             file.write(f"This is {file_name}\n")
-
-    repo.index.add(file_names)
-    repo.index.commit("Initial commit")
-
-    repo.create_tag('v1.0', message="Version 1.0")
-
-    # Create a stash
-    stash_file_path = repo_dir / "stash_file.txt"
-    with open(stash_file_path, 'w') as stash_file:
-        stash_file.write("hello")
-    repo.index.add(['stash_file.txt'])
-    repo.git.stash('save', 'Stash example')
-
-    # Add more commits
-    for i in range(2, 6):
-        with open(file_path, 'a') as file:
-            file.write(f"Appending data in {file_name}\n")
         repo.index.add([file_name])
         repo.index.commit(f"Commit {i}")
 
-    # Create and switch to 'dev' branch
-    repo.git.checkout(b='dev')
-    hi_file_path = repo_dir / "hi.txt"
-    with open(hi_file_path, 'w') as hi_file:
-        hi_file.write("Hi, there!")
-    repo.index.add(['hi.txt'])
-    repo.index.commit("Add hi.txt on 'new' branch")
+    for i in range(tag_count):
+        repo.create_tag(f'v{i + 1}.0', message=f"Version {i + 1}.0")
 
-    # switch to 'main' branch and close
-    repo.git.checkout('main')
+    if stash:
+        stash_file = "stash_file.txt"
+        stash_file_path = repo_dir / stash_file
+        with open(stash_file_path, 'w') as file:
+            file.write("hello")
+        repo.index.add([stash_file])
+        repo.git.stash('save', 'Stash example')
+
+    for i, branch_name in enumerate(extra_branches):
+        repo.git.checkout(b=branch_name)
+        branch_file = f"branch{i}.txt"
+        branch_file_path = repo_dir / branch_file
+        with open(branch_file_path, 'w') as file:
+            file.write("A new branch.")
+        repo.index.add([branch_file])
+        repo.index.commit(f"Add {branch_file} on new branch")
+
+    # switch to chosen branch and close
+    repo.git.checkout(active_branch)
     repo.close()
     return temp_base_dir
 
@@ -65,7 +62,10 @@ def delete_temp_directory(temp_dir: Path) -> None:
 if __name__ == "__main__":
     print("Preparing manual test for create_temp_git_repo()")
     repo_name = "myrepo"
-    repo_base_dir = create_temp_git_repo(repo_name)
+    repo_base_dir = create_temp_git_repo(repo_name, commit_count=5,
+                                         extra_branches=['dev', 'foo'],
+                                         tag_count=1, stash=True,
+                                         active_branch='main')
     print(f"Temporary Git repository {repo_name} created in {repo_base_dir}")
     time.sleep(6)
     delete_temp_directory(repo_base_dir)

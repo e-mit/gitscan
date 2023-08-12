@@ -33,19 +33,28 @@ class TestReadRepo(unittest.TestCase):
 
     def setUp(self) -> None:
         self.repo_name = "testrepo"
-        self.repo_base_dir = test_helpers.create_temp_git_repo(self.repo_name)
+        self.main_commit_count = 5
+        self.extra_branches = ['dev']
+        self.tag_count = 2
+        self.stash = True
+        self.active_branch = 'main'
+        self.repo_base_dir = test_helpers.create_temp_git_repo(self.repo_name,
+                                                               self.main_commit_count,
+                                                               self.extra_branches,
+                                                               self.tag_count, self.stash,
+                                                               self.active_branch)
         self.path_to_git = self.repo_base_dir / self.repo_name / ".git"
         self.expected_info = {'name': self.repo_name,
                               'path': self.repo_base_dir,
                               'bare': False,
                               'remote_count': 0,
-                              'branch_count': 2,
-                              'tag_count': 1,
+                              'branch_count': len(self.extra_branches) + 1,
+                              'tag_count': self.tag_count,
                               'untracked_count': 0,
                               'index_changes': False,
                               'working_tree_changes': False,
-                              'stash': True,
-                              'branch_name': 'main',
+                              'stash': self.stash,
+                              'branch_name': self.active_branch,
                               'detached_head': False,
                               'ahead_count': 0,
                               'behind_count': 0,
