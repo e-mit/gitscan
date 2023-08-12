@@ -38,28 +38,35 @@ class TestReadRepo(unittest.TestCase):
         self.tag_count = 2
         self.stash = True
         self.active_branch = 'main'
+        self.untracked_count = 1
+        self.index_changes = True
+        self.working_tree_changes = True
         self.repo_base_dir = test_helpers.create_temp_git_repo(self.repo_name,
                                                                self.main_commit_count,
                                                                self.extra_branches,
                                                                self.tag_count, self.stash,
-                                                               self.active_branch)
+                                                               self.active_branch,
+                                                               self.untracked_count,
+                                                               self.index_changes,
+                                                               self.working_tree_changes)
         self.path_to_git = self.repo_base_dir / self.repo_name / ".git"
-        self.expected_info = {'name': self.repo_name,
-                              'path': self.repo_base_dir,
-                              'bare': False,
-                              'remote_count': 0,
-                              'branch_count': len(self.extra_branches) + 1,
-                              'tag_count': self.tag_count,
-                              'untracked_count': 0,
-                              'index_changes': False,
-                              'working_tree_changes': False,
-                              'stash': self.stash,
-                              'branch_name': self.active_branch,
-                              'detached_head': False,
-                              'ahead_count': 0,
-                              'behind_count': 0,
-                              'up_to_date': True
-                              }
+        self.expected_info = {
+            'name': self.repo_name,
+            'path': self.repo_base_dir,
+            'bare': False,
+            'remote_count': 0,
+            'branch_count': len(self.extra_branches) + 1,
+            'tag_count': self.tag_count,
+            'untracked_count': self.untracked_count,
+            'index_changes': self.index_changes,
+            'working_tree_changes': self.working_tree_changes,
+            'stash': self.stash,
+            'branch_name': self.active_branch,
+            'detached_head': False,
+            'ahead_count': 0,
+            'behind_count': 0,
+            'up_to_date': True
+            }
 
     def tearDown(self) -> None:
         test_helpers.delete_temp_directory(self.repo_base_dir)
