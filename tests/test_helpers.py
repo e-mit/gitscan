@@ -5,6 +5,14 @@ import time
 from git import Repo  # type: ignore
 
 
+def make_git_path(base_dir: Path | str, repo_name: str, bare: bool) -> Path:
+    if bare:
+        new_git_path = Path(base_dir) / (repo_name + ".git")
+    else:
+        new_git_path = Path(base_dir) / repo_name / ".git"
+    return new_git_path
+
+
 def create_temp_git_repo(repo_name: str, commit_count: int,
                          extra_branches: list[str],
                          tag_count: int, stash: bool,
@@ -68,7 +76,7 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
         repo.index.add([file_name])
 
     repo.close()
-    return (temp_base_dir, repo_dir / ".git")
+    return (temp_base_dir, make_git_path(temp_base_dir, repo_name, bare=False))
 
 
 def delete_temp_directory(temp_dir: Path) -> None:
@@ -86,12 +94,21 @@ def create_temp_clone_git_repo(path_to_origin_repo: str | Path,
     """Create a new clone of a git repo, in a new temporary directory."""
     temp_base_dir = Path(tempfile.mkdtemp())
     repo = Repo(path_to_origin_repo)
-    new_git_path = temp_base_dir / (new_repo_name + ".git")
+    new_git_path = make_git_path(temp_base_dir, new_repo_name, bare)
     if bare:
         repo.clone(new_git_path, multi_options=['--bare'])
     else:
         repo.clone(new_git_path)
+    repo.close()
     return (temp_base_dir, new_git_path)
+
+
+def add_remote(path_to_current_repo: str | Path,
+               new_remote_name: str,
+               remote_url: str | Path) -> None:
+    repo = Repo(path_to_current_repo)
+    repo.git.remote("add", new_remote_name, remote_url)
+    repo.close()
 
 
 if __name__ == "__main__":
