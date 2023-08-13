@@ -11,19 +11,21 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
                          active_branch: str,
                          untracked_count: int,
                          index_changes: bool,
-                         working_tree_changes: bool) -> Path:
+                         working_tree_changes: bool,
+                         detached_head: bool) -> Path:
     """Create a git repo in a temporary directory"""
+    if commit_count <= 0:
+        raise ValueError("Require commit_count > 0")
     temp_base_dir = Path(tempfile.mkdtemp())
     repo_dir = temp_base_dir / repo_name
     repo = Repo.init(repo_dir)
-    repo.git.checkout(b='main')
 
-    # Create and commit files in the repository
-    for i in range(1, commit_count + 1):
-        file_name = f'file{i}.txt'
-        (repo_dir / file_name).touch()
-        repo.index.add([file_name])
-        repo.index.commit(f"Commit {i}: {file_name}")
+    repo.git.checkout(b='main')
+    file_name = "main.txt"
+    file_path = repo_dir / file_name
+    file_path.touch()
+    repo.index.add([file_name])  # TODO: try using file_path here
+    repo.index.commit("Initial commit.")
 
     for i in range(tag_count):
         repo.create_tag(f'v{i + 1}.0', message=f"Version {i + 1}.0")
@@ -37,25 +39,30 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
     # Create the specified extra branches
     for i, branch_name in enumerate(extra_branches):
         repo.git.checkout(b=branch_name)
-        branch_file = f"branch{i}.txt"
+        branch_file = f"{branch_name}.txt"
         (repo_dir / branch_file).touch()
         repo.index.add([branch_file])
-        repo.index.commit(f"Add {branch_file} on new branch")
+        repo.index.commit(f"New branch '{branch_name}'.")
 
     # switch to chosen branch
     repo.git.checkout(active_branch)
-    file_name = active_branch + ".txt"
-    file_path = repo_dir / file_name
-    file_path.touch()
-    repo.index.add([file_name])
-    repo.index.commit("Final commit.")
+
+    # Create and commit files
+    for i in range(2, commit_count + 1):
+        file_name = f'file{i}.txt'
+        (repo_dir / file_name).touch()
+        repo.index.add([file_name])
+        repo.index.commit(f"Commit {i}: {file_name}")
+
     if working_tree_changes:
-        with open(file_path, 'w') as file:
+        with open(repo_dir / (f"{active_branch}.txt"), 'w') as file:
             file.write("Modified working tree.\n")
 
-    for i in range(1, untracked_count + 1):
-        file_name = f'untracked{i}.txt'
-        (repo_dir / file_name).touch()
+    if detached_head:
+        repo.git.checkout("HEAD~1")
+
+    for i in range(untracked_count):
+        (repo_dir / f'untracked{i}.txt').touch()
 
     if index_changes:
         file_name = "index_changed.txt"
@@ -76,7 +83,7 @@ def delete_temp_directory(temp_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    print("Preparing manual test for create_temp_git_repo()")
+    print("Preparing manual test/demo for create_temp_git_repo()")
     repo_name = "myrepo"
     repo_base_dir = create_temp_git_repo(repo_name, commit_count=5,
                                          extra_branches=['dev', 'foo'],
@@ -84,7 +91,8 @@ if __name__ == "__main__":
                                          active_branch='main',
                                          untracked_count=0,
                                          index_changes=False,
-                                         working_tree_changes=False)
+                                         working_tree_changes=False,
+                                         detached_head=False)
     print(f"Temporary Git repository {repo_name} created in {repo_base_dir}")
     time.sleep(6)
     delete_temp_directory(repo_base_dir)
