@@ -81,12 +81,16 @@ def delete_temp_directory(temp_dir: Path) -> None:
 
 
 def create_temp_clone_git_repo(path_to_origin_repo: str | Path,
-                               new_repo_name: str) -> tuple[Path, Path]:
+                               new_repo_name: str,
+                               bare: bool) -> tuple[Path, Path]:
     """Create a new clone of a git repo, in a new temporary directory."""
     temp_base_dir = Path(tempfile.mkdtemp())
     repo = Repo(path_to_origin_repo)
     new_git_path = temp_base_dir / (new_repo_name + ".git")
-    repo.clone(new_git_path, multi_options=['--bare'])
+    if bare:
+        repo.clone(new_git_path, multi_options=['--bare'])
+    else:
+        repo.clone(new_git_path)
     return (temp_base_dir, new_git_path)
 
 
