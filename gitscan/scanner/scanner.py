@@ -35,17 +35,20 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
     info['remote_count'] = len(repo.remotes)
     info['branch_count'] = len(repo.branches)  # type: ignore
     info['tag_count'] = len(repo.tags)
+    info['index_changes'] = repo.is_dirty(index=True,
+                                          working_tree=False,
+                                          untracked_files=False,
+                                          submodules=False)
+    info['working_tree_changes'] = repo.is_dirty(index=False,
+                                                 working_tree=True,
+                                                 untracked_files=False,
+                                                 submodules=False)
     if not repo.bare:
         info['untracked_count'] = len(repo.untracked_files)
-        info['index_changes'] = repo.is_dirty(index=True,
-                                              working_tree=False,
-                                              untracked_files=False,
-                                              submodules=False)
-        info['working_tree_changes'] = repo.is_dirty(index=False,
-                                                     working_tree=True,
-                                                     untracked_files=False,
-                                                     submodules=False)
         info['stash'] = len(repo.git.stash("list")) > 0
+    else:
+        info['untracked_count'] = 0
+        info['stash'] = False
 
     if info['branch_count'] == 0:
         info['branch_name'] = NO_BRANCH_DISPLAY_NAME
@@ -68,6 +71,7 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
         try:
             remote.fetch()
         except Exception:
+            # Failed fetch can have many causes
             failed_count += 1
         else:
             info['ahead_count'] += sum(1 for _ in

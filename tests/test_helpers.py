@@ -12,7 +12,7 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
                          untracked_count: int,
                          index_changes: bool,
                          working_tree_changes: bool,
-                         detached_head: bool) -> Path:
+                         detached_head: bool) -> tuple[Path, Path]:
     """Create a git repo in a temporary directory"""
     temp_base_dir = Path(tempfile.mkdtemp())
     repo_dir = temp_base_dir / repo_name
@@ -68,7 +68,7 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
         repo.index.add([file_name])
 
     repo.close()
-    return temp_base_dir
+    return (temp_base_dir, repo_dir / ".git")
 
 
 def delete_temp_directory(temp_dir: Path) -> None:
@@ -80,17 +80,29 @@ def delete_temp_directory(temp_dir: Path) -> None:
     os.rmdir(temp_dir)
 
 
+def create_temp_clone_git_repo(path_to_origin_repo: str | Path,
+                               new_repo_name: str) -> tuple[Path, Path]:
+    """Create a new clone of a git repo, in a new temporary directory."""
+    temp_base_dir = Path(tempfile.mkdtemp())
+    repo = Repo(path_to_origin_repo)
+    new_git_path = temp_base_dir / (new_repo_name + ".git")
+    repo.clone(new_git_path, multi_options=['--bare'])
+    return (temp_base_dir, new_git_path)
+
+
 if __name__ == "__main__":
     print("Preparing manual test/demo for create_temp_git_repo()")
     repo_name = "myrepo"
-    repo_base_dir = create_temp_git_repo(repo_name, commit_count=0,
-                                         extra_branches=['dev', 'foo'],
-                                         tag_count=1, stash=True,
-                                         active_branch='main',
-                                         untracked_count=0,
-                                         index_changes=False,
-                                         working_tree_changes=False,
-                                         detached_head=False)
+    (repo_base_dir,
+     full_git_path) = create_temp_git_repo(repo_name,
+                                           commit_count=0,
+                                           extra_branches=['dev', 'new'],
+                                           tag_count=1, stash=True,
+                                           active_branch='main',
+                                           untracked_count=0,
+                                           index_changes=False,
+                                           working_tree_changes=False,
+                                           detached_head=False)
     print(f"Temporary Git repository {repo_name} created in {repo_base_dir}")
     time.sleep(6)
     delete_temp_directory(repo_base_dir)
