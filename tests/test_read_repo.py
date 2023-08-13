@@ -53,14 +53,19 @@ class TestReadRepo(unittest.TestCase):
             'branch_name': expected_branch_name,
             'detached_head': self.detached_head,
             'ahead_count': 0,
-            'behind_count': 0,
-            'up_to_date': True
+            'behind_count': 0
             }
 
     def tearDown(self) -> None:
         test_helpers.delete_temp_directory(self.repo_base_dir)
 
+    def update_uptodate(self):
+        self.expected_info['up_to_date'] = (
+                    self.expected_info['ahead_count'] == 0 and
+                    self.expected_info['behind_count'] == 0)
+
     def test_read_repo(self) -> None:
+        self.update_uptodate()
         info: dict[str, Any] = scanner.read_repo(self.path_to_git)
         last_commit_datetime = info.pop('last_commit_datetime')
         with self.subTest(key='last_commit_datetime'):
