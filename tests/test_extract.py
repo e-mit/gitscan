@@ -30,17 +30,19 @@ class TestExtractRepoName(unittest.TestCase):
 
 
 class TestReadRepo(unittest.TestCase):
+    # default/simplest values:
+    repo_name = "testrepo"
+    main_commit_count = 5
+    extra_branches: list[str] = []
+    tag_count = 0
+    stash = False
+    active_branch = 'main'
+    untracked_count = 0
+    index_changes = False
+    working_tree_changes = False
+    detached_head = False
 
     def setUp(self) -> None:
-        self.repo_name = "testrepo"
-        self.main_commit_count = 5
-        self.extra_branches = ['dev']
-        self.tag_count = 2
-        self.stash = True
-        self.active_branch = 'main'
-        self.untracked_count = 1
-        self.index_changes = True
-        self.working_tree_changes = True
         self.repo_base_dir = test_helpers.create_temp_git_repo(self.repo_name,
                                                                self.main_commit_count,
                                                                self.extra_branches,
@@ -48,7 +50,8 @@ class TestReadRepo(unittest.TestCase):
                                                                self.active_branch,
                                                                self.untracked_count,
                                                                self.index_changes,
-                                                               self.working_tree_changes)
+                                                               self.working_tree_changes,
+                                                               self.detached_head)
         self.path_to_git = self.repo_base_dir / self.repo_name / ".git"
         self.expected_info = {
             'name': self.repo_name,
@@ -62,7 +65,7 @@ class TestReadRepo(unittest.TestCase):
             'working_tree_changes': self.working_tree_changes,
             'stash': self.stash,
             'branch_name': self.active_branch,
-            'detached_head': False,
+            'detached_head': self.detached_head,
             'ahead_count': 0,
             'behind_count': 0,
             'up_to_date': True
@@ -71,12 +74,18 @@ class TestReadRepo(unittest.TestCase):
     def tearDown(self) -> None:
         test_helpers.delete_temp_directory(self.repo_base_dir)
 
-    def test_with_Path(self) -> None:
+    def test_read_repo(self) -> None:
         info: dict[str, Any] = scanner.read_repo(self.path_to_git)
         self.assertEqual(set(info.keys()), set(self.expected_info.keys()))
         for k in self.expected_info:
             with self.subTest(key=k):
                 self.assertEqual(info[k], self.expected_info[k])
+
+
+class TestReadRepoStash(TestReadRepo):
+    def setUp(self) -> None:
+        self.stash = True
+        super().setUp()
 
 
 if __name__ == '__main__':
