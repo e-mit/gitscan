@@ -32,7 +32,7 @@ class TestExtractRepoName(unittest.TestCase):
 class TestReadRepo(unittest.TestCase):
     # default/simplest values:
     repo_name = "testrepo"
-    main_commit_count = 5
+    commit_count = 5
     extra_branches: list[str] = []
     tag_count = 0
     stash = False
@@ -43,15 +43,16 @@ class TestReadRepo(unittest.TestCase):
     detached_head = False
 
     def setUp(self) -> None:
-        self.repo_base_dir = test_helpers.create_temp_git_repo(self.repo_name,
-                                                               self.main_commit_count,
-                                                               self.extra_branches,
-                                                               self.tag_count, self.stash,
-                                                               self.active_branch,
-                                                               self.untracked_count,
-                                                               self.index_changes,
-                                                               self.working_tree_changes,
-                                                               self.detached_head)
+        self.repo_base_dir = test_helpers.create_temp_git_repo(
+                                            self.repo_name,
+                                            self.commit_count,
+                                            self.extra_branches,
+                                            self.tag_count, self.stash,
+                                            self.active_branch,
+                                            self.untracked_count,
+                                            self.index_changes,
+                                            self.working_tree_changes,
+                                            self.detached_head)
         self.path_to_git = self.repo_base_dir / self.repo_name / ".git"
         self.expected_info = {
             'name': self.repo_name,
@@ -64,7 +65,8 @@ class TestReadRepo(unittest.TestCase):
             'index_changes': self.index_changes,
             'working_tree_changes': self.working_tree_changes,
             'stash': self.stash,
-            'branch_name': self.active_branch,
+            'branch_name':
+                "detached" if self.detached_head else self.active_branch,
             'detached_head': self.detached_head,
             'ahead_count': 0,
             'behind_count': 0,
@@ -85,6 +87,72 @@ class TestReadRepo(unittest.TestCase):
 class TestReadRepoStash(TestReadRepo):
     def setUp(self) -> None:
         self.stash = True
+        super().setUp()
+
+
+class TestReadRepoBranches(TestReadRepo):
+    def setUp(self) -> None:
+        self.extra_branches = ['dev', 'test']
+        super().setUp()
+
+
+class TestReadRepoTags(TestReadRepo):
+    def setUp(self) -> None:
+        self.tag_count = 3
+        super().setUp()
+
+
+class TestReadRepoActiveBranch(TestReadRepo):
+    def setUp(self) -> None:
+        self.extra_branches = ['dev', 'test']
+        self.active_branch = 'dev'
+        super().setUp()
+
+
+class TestReadRepoUntracked(TestReadRepo):
+    def setUp(self) -> None:
+        self.untracked_count = 2
+        super().setUp()
+
+
+class TestReadRepoIndex(TestReadRepo):
+    def setUp(self) -> None:
+        self.index_changes = True
+        super().setUp()
+
+
+class TestReadRepoWorkingTree(TestReadRepo):
+    def setUp(self) -> None:
+        self.working_tree_changes = True
+        super().setUp()
+
+
+class TestReadRepoDetachedHead(TestReadRepo):
+    def setUp(self) -> None:
+        self.detached_head = True
+        super().setUp()
+
+
+class TestReadRepoUntrackedModified(TestReadRepo):
+    def setUp(self) -> None:
+        self.extra_branches = ['dev']
+        self.active_branch = 'dev'
+        self.working_tree_changes = True
+        self.untracked_count = 4
+        super().setUp()
+
+
+class TestReadRepoUntrackedIndex(TestReadRepo):
+    def setUp(self) -> None:
+        self.index_changes = True
+        self.untracked_count = 3
+        super().setUp()
+
+
+class TestReadRepoDetachedIndex(TestReadRepo):
+    def setUp(self) -> None:
+        self.index_changes = True
+        self.detached_head = True
         super().setUp()
 
 
