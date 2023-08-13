@@ -1,6 +1,9 @@
 import unittest
 from pathlib import Path
 from typing import Any
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from gitscan.scanner import scanner
 from tests import test_helpers
 
@@ -78,7 +81,14 @@ class TestReadRepo(unittest.TestCase):
 
     def test_read_repo(self) -> None:
         info: dict[str, Any] = scanner.read_repo(self.path_to_git)
-        self.assertEqual(set(info.keys()), set(self.expected_info.keys()))
+        last_commit_datetime = info.pop('last_commit_datetime')
+        with self.subTest(key='last_commit_datetime'):
+            self.assertTrue(last_commit_datetime <
+                            datetime.now(ZoneInfo('UTC')))
+            self.assertTrue((datetime.now(ZoneInfo('UTC')) -
+                             last_commit_datetime).total_seconds() < 20.0)
+        with self.subTest(key='key_sets'):
+            self.assertEqual(set(info.keys()), set(self.expected_info.keys()))
         for k in self.expected_info:
             with self.subTest(key=k):
                 self.assertEqual(info[k], self.expected_info[k])

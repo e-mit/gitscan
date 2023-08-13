@@ -69,4 +69,6 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
                 ))
     info['up_to_date'] = ((info['behind_count'] == 0) and
                           (info['ahead_count'] == 0))
+    info['last_commit_datetime'
+         ] = repo.iter_commits().__next__().committed_datetime
     return info
