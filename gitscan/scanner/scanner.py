@@ -4,6 +4,10 @@ from typing import Any
 from git import Repo  # type: ignore
 
 
+DETACHED_BRANCH_DISPLAY_NAME = "DETACHED"
+NO_BRANCH_DISPLAY_NAME = "-"
+
+
 def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path]:
     """Get the repo name, without extension (if any).
 
@@ -43,12 +47,19 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
                                                      submodules=False)
         info['stash'] = len(repo.git.stash("list")) > 0
 
-    try:
-        info['branch_name'] = repo.active_branch.name
+    if info['branch_count'] == 0:
+        info['branch_name'] = NO_BRANCH_DISPLAY_NAME
         info['detached_head'] = False
-    except TypeError:
-        info['detached_head'] = True
-        info['branch_name'] = "detached"
+        info['last_commit_datetime'] = None
+    else:
+        info['last_commit_datetime'
+            ] = repo.iter_commits().__next__().committed_datetime
+        try:
+            info['branch_name'] = repo.active_branch.name
+            info['detached_head'] = False
+        except TypeError:
+            info['detached_head'] = True
+            info['branch_name'] = DETACHED_BRANCH_DISPLAY_NAME
 
     info['ahead_count'] = 0
     info['behind_count'] = 0
@@ -69,6 +80,4 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
                 ))
     info['up_to_date'] = ((info['behind_count'] == 0) and
                           (info['ahead_count'] == 0))
-    info['last_commit_datetime'
-         ] = repo.iter_commits().__next__().committed_datetime
     return info

@@ -35,7 +35,7 @@ class TestExtractRepoName(unittest.TestCase):
 class TestReadRepo(unittest.TestCase):
     # default/simplest values:
     repo_name = "testrepo"
-    commit_count = 5
+    commit_count = 1
     extra_branches: list[str] = []
     tag_count = 0
     stash = False
@@ -57,19 +57,25 @@ class TestReadRepo(unittest.TestCase):
                                             self.working_tree_changes,
                                             self.detached_head)
         self.path_to_git = self.repo_base_dir / self.repo_name / ".git"
+        if self.detached_head:
+            expected_branch_name = scanner.DETACHED_BRANCH_DISPLAY_NAME
+        elif self.commit_count == 0:
+            expected_branch_name = scanner.NO_BRANCH_DISPLAY_NAME
+        else:
+            expected_branch_name = self.active_branch
         self.expected_info = {
             'name': self.repo_name,
             'path': self.repo_base_dir,
             'bare': False,
             'remote_count': 0,
-            'branch_count': len(self.extra_branches) + 1,
+            'branch_count': (0 if self.commit_count == 0
+                             else len(self.extra_branches) + 1),
             'tag_count': self.tag_count,
             'untracked_count': self.untracked_count,
             'index_changes': self.index_changes,
             'working_tree_changes': self.working_tree_changes,
             'stash': self.stash,
-            'branch_name':
-                "detached" if self.detached_head else self.active_branch,
+            'branch_name': expected_branch_name,
             'detached_head': self.detached_head,
             'ahead_count': 0,
             'behind_count': 0,
@@ -83,10 +89,13 @@ class TestReadRepo(unittest.TestCase):
         info: dict[str, Any] = scanner.read_repo(self.path_to_git)
         last_commit_datetime = info.pop('last_commit_datetime')
         with self.subTest(key='last_commit_datetime'):
-            self.assertTrue(last_commit_datetime <
-                            datetime.now(ZoneInfo('UTC')))
-            self.assertTrue((datetime.now(ZoneInfo('UTC')) -
-                             last_commit_datetime).total_seconds() < 20.0)
+            if (self.commit_count == 0):
+                self.assertIsNone(last_commit_datetime)
+            else:
+                self.assertTrue(last_commit_datetime <
+                                datetime.now(ZoneInfo('UTC')))
+                self.assertTrue((datetime.now(ZoneInfo('UTC')) -
+                                last_commit_datetime).total_seconds() < 20.0)
         with self.subTest(key='key_sets'):
             self.assertEqual(set(info.keys()), set(self.expected_info.keys()))
         for k in self.expected_info:
@@ -163,6 +172,26 @@ class TestReadRepoDetachedIndex(TestReadRepo):
     def setUp(self) -> None:
         self.index_changes = True
         self.detached_head = True
+        super().setUp()
+
+
+class TestReadRepoNoCommits(TestReadRepo):
+    def setUp(self) -> None:
+        self.commit_count = 0
+        super().setUp()
+
+
+class TestReadRepoNoCommitsUntracked(TestReadRepo):
+    def setUp(self) -> None:
+        self.commit_count = 0
+        self.untracked_count = 1
+        super().setUp()
+
+
+class TestReadRepoNoCommitsIndex(TestReadRepo):
+    def setUp(self) -> None:
+        self.commit_count = 0
+        self.index_changes = True
         super().setUp()
 
 
