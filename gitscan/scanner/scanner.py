@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Any
 from git import Repo  # type: ignore
-
+from git.exc import GitCommandError
 
 DETACHED_BRANCH_DISPLAY_NAME = "DETACHED"
 NO_BRANCH_DISPLAY_NAME = "-"
@@ -37,6 +37,7 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
     info: dict[str, Any] = {}
     (info['name'], _, info['containing_dir']) = extract_repo_name(path_to_git)
     info['bare'] = repo.bare
+    info['detached_head'] = repo.head.is_detached
     info['remote_count'] = len(repo.remotes)
     info['branch_count'] = len(repo.branches)  # type: ignore
     info['tag_count'] = len(repo.tags)
@@ -57,36 +58,35 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
 
     if info['branch_count'] == 0:
         info['branch_name'] = NO_BRANCH_DISPLAY_NAME
-        info['detached_head'] = False
         info['last_commit_datetime'] = None
     else:
         info['last_commit_datetime'] = repo.iter_commits(
                                         ).__next__().committed_datetime
         try:
             info['branch_name'] = repo.active_branch.name
-            info['detached_head'] = False
         except TypeError:
-            info['detached_head'] = True
-            info['branch_name'] = DETACHED_BRANCH_DISPLAY_NAME
+            info['branch_name'] = NO_BRANCH_DISPLAY_NAME
+
+    if repo.head.is_detached:
+        info['branch_name'] = DETACHED_BRANCH_DISPLAY_NAME
 
     # Find the smallest number of commits ahead, and the number
     # of unique commits behind.
     remote_commits: set[str] = set()
     ahead_counts: list[int] = []
     info['fetch_failed'] = False
-    if not repo.bare:
+    if not repo.bare and info['branch_count']:
         for remote in repo.remotes:
             try:
                 repo.git.fetch(remote.name)
-            except Exception:
-                info['fetch_failed'] = True
-            else:
                 ahead_counts.append(sum(1 for _ in repo.iter_commits(
                             f"{remote.name}/{info['branch_name']}"
                             f"..{info['branch_name']}")))
                 remote_commits.update(c.hexsha for c in repo.iter_commits(
                             f"{info['branch_name']}"
                             f"..{remote.name}/{info['branch_name']}"))
+            except GitCommandError:
+                info['fetch_failed'] = True
 
     info['behind_count'] = len(remote_commits)
     info['ahead_count'] = 0 if not ahead_counts else min(ahead_counts)

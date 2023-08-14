@@ -63,7 +63,7 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
                 file.write("Modified working tree.\n")
 
         if detached_head:
-            repo.git.checkout("HEAD~0")
+            repo.git.checkout(f"HEAD~{commit_count - 1}")
 
     for i in range(untracked_count):
         (repo_dir / f'untracked{i}.txt').touch()

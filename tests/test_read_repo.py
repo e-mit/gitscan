@@ -8,6 +8,9 @@ from gitscan.scanner import scanner
 from tests import test_helpers
 
 
+MAX_EXPECTED_TEST_COMMIT_AGE_S = 20.0
+
+
 class TestReadRepo(unittest.TestCase):
     # default/simplest values:
     repo_name = "testrepo"
@@ -77,7 +80,8 @@ class TestReadRepo(unittest.TestCase):
                 self.assertTrue(last_commit_datetime <
                                 datetime.now(ZoneInfo('UTC')))
                 self.assertTrue((datetime.now(ZoneInfo('UTC')) -
-                                last_commit_datetime).total_seconds() < 20.0)
+                                last_commit_datetime).total_seconds()
+                                < MAX_EXPECTED_TEST_COMMIT_AGE_S)
         with self.subTest(key='key_sets'):
             self.assertEqual(set(info.keys()), set(self.expected_info.keys()))
         for k in self.expected_info:
