@@ -21,7 +21,7 @@ class TestReadRepo(unittest.TestCase):
     detached_head = False
 
     def setUp(self) -> None:
-        (self.repo_base_dir,
+        (self.containing_dir, self.repo_dir,
          self.path_to_git) = test_helpers.create_temp_git_repo(
                                             self.repo_name,
                                             self.commit_count,
@@ -40,7 +40,7 @@ class TestReadRepo(unittest.TestCase):
             expected_branch_name = self.active_branch
         self.expected_info = {
             'name': self.repo_name,
-            'path': self.repo_base_dir,
+            'containing_dir': self.containing_dir,
             'bare': False,
             'remote_count': 0,
             'branch_count': (0 if self.commit_count == 0
@@ -53,11 +53,12 @@ class TestReadRepo(unittest.TestCase):
             'branch_name': expected_branch_name,
             'detached_head': self.detached_head,
             'ahead_count': 0,
-            'behind_count': 0
+            'behind_count': 0,
+            'fetch_failed': False
             }
 
     def tearDown(self) -> None:
-        test_helpers.delete_temp_directory(self.repo_base_dir)
+        test_helpers.delete_temp_directory(self.containing_dir)
 
     def update_uptodate(self):
         self.expected_info['up_to_date'] = (

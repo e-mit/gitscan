@@ -9,14 +9,14 @@ from tests import test_helpers
 class TestReadBareRepo(TestReadRepo):
     def setUp(self) -> None:
         super().setUp()  # Produces a new test repo
-        self.origin_repo_base_dir = Path(self.repo_base_dir)
+        self.origin_containing_dir = Path(self.containing_dir)
         # Make a bare clone of the repo and update expected properties
         bare_repo_name = "bare1"
-        (self.repo_base_dir,
+        (self.containing_dir, self.repo_dir,
          self.path_to_git) = test_helpers.create_temp_clone_git_repo(
-                                self.path_to_git, bare_repo_name, bare=True)
+                                self.repo_dir, bare_repo_name, bare=True)
         self.expected_info['name'] = bare_repo_name
-        self.expected_info['path'] = self.repo_base_dir
+        self.expected_info['containing_dir'] = self.containing_dir
         self.expected_info['remote_count'] = 1
         # the following properties should always be true for bare repos:
         if self.commit_count == 0:
@@ -33,7 +33,7 @@ class TestReadBareRepo(TestReadRepo):
 
     def tearDown(self) -> None:
         super().tearDown()
-        test_helpers.delete_temp_directory(self.origin_repo_base_dir)
+        test_helpers.delete_temp_directory(self.origin_containing_dir)
 
 
 class TestReadBareRepoStash(TestReadBareRepo):
