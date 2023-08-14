@@ -1,16 +1,20 @@
 import os
 from pathlib import Path
 import tempfile
-import time
+import uuid
 from git import Repo  # type: ignore
 
 
-def make_git_path(base_dir: Path | str, repo_name: str, bare: bool) -> Path:
+def make_path_to_git(containing_dir: Path | str, repo_name: str,
+                     bare: bool) -> tuple[Path, Path]:
+    """path_to_git is the directory which contains the HEAD file."""
     if bare:
-        new_git_path = Path(base_dir) / (repo_name + ".git")
+        path_to_git = Path(containing_dir) / (repo_name + ".git")
+        repo_dir = Path(path_to_git)
     else:
-        new_git_path = Path(base_dir) / repo_name / ".git"
-    return new_git_path
+        path_to_git = Path(containing_dir) / repo_name / ".git"
+        repo_dir = Path(containing_dir) / repo_name
+    return (path_to_git, repo_dir)
 
 
 def create_temp_git_repo(repo_name: str, commit_count: int,
@@ -20,10 +24,11 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
                          untracked_count: int,
                          index_changes: bool,
                          working_tree_changes: bool,
-                         detached_head: bool) -> tuple[Path, Path]:
+                         detached_head: bool) -> tuple[Path, Path, Path]:
     """Create a git repo in a temporary directory"""
-    temp_base_dir = Path(tempfile.mkdtemp())
-    repo_dir = temp_base_dir / repo_name
+    containing_dir = Path(tempfile.mkdtemp())
+    (path_to_git, repo_dir) = make_path_to_git(containing_dir, repo_name,
+                                               bare=False)
     repo = Repo.init(repo_dir)
     repo.git.checkout(b='main')
 
@@ -50,15 +55,9 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
             repo.index.add([branch_file])
             repo.index.commit(f"New branch '{branch_name}'.")
 
-        # switch to chosen branch
+        # switch to chosen branch and make more commits:
         repo.git.checkout(active_branch)
-
-        # Create and commit files
-        for i in range(2, commit_count + 1):
-            file_name = f'file{i}.txt'
-            (repo_dir / file_name).touch()
-            repo.index.add([file_name])
-            repo.index.commit(f"Commit {i}: {file_name}")
+        do_commits(repo, repo_dir, commit_count - 1)
 
         if working_tree_changes:
             with open(repo_dir / (f"{active_branch}.txt"), 'w') as file:
@@ -76,7 +75,7 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
         repo.index.add([file_name])
 
     repo.close()
-    return (temp_base_dir, make_git_path(temp_base_dir, repo_name, bare=False))
+    return (containing_dir, repo_dir, path_to_git)
 
 
 def delete_temp_directory(temp_dir: Path) -> None:
@@ -88,19 +87,23 @@ def delete_temp_directory(temp_dir: Path) -> None:
     os.rmdir(temp_dir)
 
 
-def create_temp_clone_git_repo(path_to_origin_repo: str | Path,
+def create_temp_clone_git_repo(origin_repo_dir: str | Path,
                                new_repo_name: str,
-                               bare: bool) -> tuple[Path, Path]:
-    """Create a new clone of a git repo, in a new temporary directory."""
-    temp_base_dir = Path(tempfile.mkdtemp())
-    repo = Repo(path_to_origin_repo)
-    new_git_path = make_git_path(temp_base_dir, new_repo_name, bare)
+                               bare: bool) -> tuple[Path, Path, Path]:
+    """Create a new clone of a git repo, in a new temporary directory.
+    
+    If bare, the git files are placed directly in origin_repo_dir.
+    If not bare, a .git directory is made in origin_repo_dir."""
+    containing_dir = Path(tempfile.mkdtemp())
+    repo = Repo(origin_repo_dir)
+    (new_path_to_git, repo_dir) = make_path_to_git(containing_dir,
+                                                   new_repo_name, bare)
     if bare:
-        repo.clone(new_git_path, multi_options=['--bare'])
+        repo.clone(repo_dir, multi_options=['--bare'])
     else:
-        repo.clone(new_git_path)
+        repo.clone(repo_dir)
     repo.close()
-    return (temp_base_dir, new_git_path)
+    return (containing_dir, repo_dir, new_path_to_git)
 
 
 def add_remote(path_to_current_repo: str | Path,
@@ -111,20 +114,16 @@ def add_remote(path_to_current_repo: str | Path,
     repo.close()
 
 
-if __name__ == "__main__":
-    print("Preparing manual test/demo for create_temp_git_repo()")
-    repo_name = "myrepo"
-    (repo_base_dir,
-     full_git_path) = create_temp_git_repo(repo_name,
-                                           commit_count=0,
-                                           extra_branches=['dev', 'new'],
-                                           tag_count=1, stash=True,
-                                           active_branch='main',
-                                           untracked_count=0,
-                                           index_changes=False,
-                                           working_tree_changes=False,
-                                           detached_head=False)
-    print(f"Temporary Git repository {repo_name} created in {repo_base_dir}")
-    time.sleep(6)
-    delete_temp_directory(repo_base_dir)
-    print("Temporary Git repository deleted.")
+def create_commits(repo_dir: Path, commit_count: int) -> None:
+    repo = Repo(repo_dir)
+    do_commits(repo, repo_dir, commit_count)
+    repo.close()
+
+
+def do_commits(repo: Repo, repo_dir: Path, commit_count: int) -> None:
+    """Create and commit files."""
+    for i in range(commit_count):
+        file_name = str(uuid.uuid4())
+        (repo_dir / file_name).touch()
+        repo.index.add([file_name])
+        repo.index.commit(f"Commit {i}: {file_name}")
