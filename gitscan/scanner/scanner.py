@@ -69,6 +69,8 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
             info['detached_head'] = True
             info['branch_name'] = DETACHED_BRANCH_DISPLAY_NAME
 
+    # Find the smallest number of commits ahead, and the number
+    # of unique commits behind.
     remote_commits: set[str] = set()
     ahead_counts: list[int] = []
     info['fetch_failed'] = False
