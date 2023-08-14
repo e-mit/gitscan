@@ -1,7 +1,8 @@
 import unittest
 from pathlib import Path
-from test_read_repo import TestReadRepo
+import shutil
 
+from test_read_repo import TestReadRepo
 from gitscan.scanner import scanner
 from tests import test_helpers
 
@@ -33,7 +34,7 @@ class TestReadBareRepo(TestReadRepo):
 
     def tearDown(self) -> None:
         super().tearDown()
-        test_helpers.delete_temp_directory(self.origin_containing_dir)
+        shutil.rmtree(self.origin_containing_dir)
 
 
 class TestReadBareRepoStash(TestReadBareRepo):

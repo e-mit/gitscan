@@ -2,6 +2,7 @@ import unittest
 from typing import Any
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import shutil
 
 from gitscan.scanner import scanner
 from tests import test_helpers
@@ -58,7 +59,7 @@ class TestReadRepo(unittest.TestCase):
             }
 
     def tearDown(self) -> None:
-        test_helpers.delete_temp_directory(self.containing_dir)
+        shutil.rmtree(self.containing_dir)
 
     def update_uptodate(self):
         self.expected_info['up_to_date'] = (

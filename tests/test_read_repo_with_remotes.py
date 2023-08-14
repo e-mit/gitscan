@@ -1,7 +1,8 @@
 import unittest
 from pathlib import Path
-from test_read_repo import TestReadRepo
+import shutil
 
+from test_read_repo import TestReadRepo
 from tests import test_helpers
 
 
@@ -49,7 +50,7 @@ class TestReadRepoWithRemotes(TestReadRepo):
     def tearDown(self) -> None:
         super().tearDown()  # this deletes the final cloned repo
         for temp_dir in self.remote_containing_dirs:
-            test_helpers.delete_temp_directory(temp_dir)
+            shutil.rmtree(temp_dir)
 
 
 class TestReadRepoWithMultipleRemotes(TestReadRepoWithRemotes):

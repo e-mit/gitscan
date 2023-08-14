@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import tempfile
 import uuid
@@ -78,20 +77,11 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
     return (containing_dir, repo_dir, path_to_git)
 
 
-def delete_temp_directory(temp_dir: Path) -> None:
-    for root, dirs, files in os.walk(temp_dir, topdown=False):
-        for file in files:
-            os.remove(Path(root) / file)
-        for dir in dirs:
-            os.rmdir(Path(root) / dir)
-    os.rmdir(temp_dir)
-
-
 def create_temp_clone_git_repo(origin_repo_dir: str | Path,
                                new_repo_name: str,
                                bare: bool) -> tuple[Path, Path, Path]:
     """Create a new clone of a git repo, in a new temporary directory.
-    
+
     If bare, the git files are placed directly in origin_repo_dir.
     If not bare, a .git directory is made in origin_repo_dir."""
     containing_dir = Path(tempfile.mkdtemp())
