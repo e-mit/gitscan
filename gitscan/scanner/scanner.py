@@ -8,29 +8,34 @@ DETACHED_BRANCH_DISPLAY_NAME = "DETACHED"
 NO_BRANCH_DISPLAY_NAME = "-"
 
 
-def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path]:
-    """Get the repo name, without extension (if any).
+def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path, Path]:
+    """Get the repo name, without .git extension (if any).
 
-    Also get the containing directory path.
+    Also get the path of the repo directory and the
+    directory that contains the repo directory.
+    path_to_git is the directory which contains the HEAD file
+    and is returned from a search.
     """
     gitpath = Path(path_to_git)
     if gitpath.stem == '.git':
-        repo_name = gitpath.parents[0].stem
-        repo_path = gitpath.parents[1]
+        repo_name = gitpath.parent.stem
+        containing_dir = gitpath.parents[1]
+        repo_dir = gitpath.parent
     else:
         repo_name = gitpath.stem
-        repo_path = gitpath.parent
-    return (repo_name, repo_path)
+        containing_dir = gitpath.parent
+        repo_dir = gitpath
+    return (repo_name, repo_dir, containing_dir)
 
 
 def read_repo(path_to_git: str | Path) -> dict[str, Any]:
     """Extract basic information about the repo.
 
-    path_to_git is the path to the .git or X.git directory.
+    see extract_repo_name() for path_to_git definition.
     """
     repo = Repo(path_to_git)
     info: dict[str, Any] = {}
-    (info['name'], info['path']) = extract_repo_name(path_to_git)
+    (info['name'], _, info['containing_dir']) = extract_repo_name(path_to_git)
     info['bare'] = repo.bare
     info['remote_count'] = len(repo.remotes)
     info['branch_count'] = len(repo.branches)  # type: ignore
@@ -64,24 +69,25 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
             info['detached_head'] = True
             info['branch_name'] = DETACHED_BRANCH_DISPLAY_NAME
 
-    info['ahead_count'] = 0
-    info['behind_count'] = 0
-    failed_count = 0
-    for remote in repo.remotes:
-        try:
-            remote.fetch()
-        except Exception:
-            # Failed fetch can have many causes
-            failed_count += 1
-        else:
-            info['ahead_count'] += sum(1 for _ in
-                repo.iter_commits(
-                  f"{remote.name}/{info['branch_name']}..{info['branch_name']}"
-                ))
-            info['behind_count'] += sum(1 for _ in
-                repo.iter_commits(
-                  f"{info['branch_name']}..{remote.name}/{info['branch_name']}"
-                ))
+    remote_commits: set[str] = set()
+    ahead_counts: list[int] = []
+    info['fetch_failed'] = False
+    if not repo.bare:
+        for remote in repo.remotes:
+            try:
+                repo.git.fetch(remote.name)
+            except Exception:
+                info['fetch_failed'] = True
+            else:
+                ahead_counts.append(sum(1 for _ in repo.iter_commits(
+                            f"{remote.name}/{info['branch_name']}"
+                            f"..{info['branch_name']}")))
+                remote_commits.update(c.hexsha for c in repo.iter_commits(
+                            f"{info['branch_name']}"
+                            f"..{remote.name}/{info['branch_name']}"))
+
+    info['behind_count'] = len(remote_commits)
+    info['ahead_count'] = 0 if not ahead_counts else min(ahead_counts)
     info['up_to_date'] = ((info['behind_count'] == 0) and
                           (info['ahead_count'] == 0))
     return info
