@@ -15,26 +15,26 @@ class TestReadRepoWithRemotes(TestReadRepo):
         super().setUp()  # Produces a new test repo
         self.remote_containing_dirs: list[Path] = []
         self.remote_repo_dir: list[Path] = []
-        clone_repo_name = ""
         for clone_count in range(self.remote_count):
             # save the temp directory so it can be deleted/remoted:
             self.remote_containing_dirs.append(Path(self.containing_dir))
             self.remote_repo_dir.append(Path(self.repo_dir))
             # Make a new clone
-            clone_repo_name = f"clone{clone_count}"
+            self.clone_repo_name = f"clone{clone_count}"
             (self.containing_dir, self.repo_dir,
              self.path_to_git) = test_helpers.create_temp_clone_git_repo(
-                                    self.repo_dir, clone_repo_name,
+                                    self.repo_dir, self.clone_repo_name,
                                     bare=False)
             # If required, do commits on the cloned repo:
-            test_helpers.create_commits(self.remote_repo_dir[-1],
-                             self.behind_each_remote_count[clone_count])
+            test_helpers.create_commits(
+                self.remote_repo_dir[-1],
+                self.behind_each_remote_count[clone_count])
         # Set all repos as remotes, except final one ('origin' by default):
         for rem in range(self.remote_count - 1):
             test_helpers.add_remote(self.path_to_git, f"remote{rem}",
                                     self.remote_repo_dir[rem])
         test_helpers.create_commits(self.repo_dir, self.ahead_count)
-        self.expected_info['name'] = clone_repo_name
+        self.expected_info['name'] = self.clone_repo_name
         self.expected_info['containing_dir'] = self.containing_dir
         # the following properties apply to the clones, irrespective of origin:
         self.expected_info['bare'] = False

@@ -21,16 +21,15 @@ class TestReadBareRepo(TestReadRepo):
         self.expected_info['remote_count'] = 1
         # the following properties should always be true for bare repos:
         if self.commit_count == 0:
-            expected_branch_name = scanner.NO_BRANCH_DISPLAY_NAME
+            self.expected_info['branch_name'] = scanner.NO_BRANCH_DISPLAY_NAME
         else:
-            expected_branch_name = self.active_branch
+            self.expected_info['branch_name'] = self.active_branch
         self.expected_info['bare'] = True
         self.expected_info['untracked_count'] = 0
         self.expected_info['index_changes'] = False
         self.expected_info['working_tree_changes'] = False
         self.expected_info['stash'] = False
         self.expected_info['detached_head'] = False
-        self.expected_info['branch_name'] = expected_branch_name
 
     def tearDown(self) -> None:
         super().tearDown()

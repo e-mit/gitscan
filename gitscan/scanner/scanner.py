@@ -60,8 +60,8 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
         info['detached_head'] = False
         info['last_commit_datetime'] = None
     else:
-        info['last_commit_datetime'
-            ] = repo.iter_commits().__next__().committed_datetime
+        info['last_commit_datetime'] = repo.iter_commits(
+                                        ).__next__().committed_datetime
         try:
             info['branch_name'] = repo.active_branch.name
             info['detached_head'] = False
