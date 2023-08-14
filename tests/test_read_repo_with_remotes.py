@@ -101,5 +101,44 @@ class TestReadRepoAheadAndBehindRemotes(TestReadRepoWithRemotes):
         super().setUp()
 
 
+class TestReadRepoFailFetch(TestReadRepoWithRemotes):
+    def setUp(self) -> None:
+        self.ahead_count = 2
+        self.remote_count = 4
+        self.behind_each_remote_count = [1, 3, 1, 0]
+        super().setUp()
+        test_helpers.add_remote(self.path_to_git, "fakerepo",
+                                "https://example.com/fake-repo")
+        self.expected_info['fetch_failed'] = True
+        self.expected_info['remote_count'] = self.remote_count + 1
+
+
+class TestReadRepoCloneOfEmpty(TestReadRepoWithRemotes):
+    def setUp(self) -> None:
+        self.commit_count = 0
+        super().setUp()
+        self.expected_info['branch_count'] = 0
+
+
+class TestReadRepoCloneOfEmptyWithCommits(TestReadRepoWithRemotes):
+    def setUp(self) -> None:
+        self.ahead_count = 2
+        self.commit_count = 0
+        super().setUp()
+        self.commit_count = 2
+        self.expected_info['fetch_failed'] = True
+        self.expected_info['branch_name'] = "master"  # the default
+        self.expected_info['ahead_count'] = 0
+
+
+class TestReadRepoCloneOfDetachedHead(TestReadRepoWithRemotes):
+    def setUp(self) -> None:
+        self.commit_count = 3
+        self.detached_head = True
+        super().setUp()
+        self.commit_count = 0
+        self.expected_info['branch_count'] = 0
+
+
 if __name__ == '__main__':
     unittest.main()
