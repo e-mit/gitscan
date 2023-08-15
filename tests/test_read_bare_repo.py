@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 
 from test_read_repo import TestReadRepo
-from gitscan.scanner import scanner
+from gitscan.scanner import read
 from tests import test_helpers
 
 
@@ -21,7 +21,7 @@ class TestReadBareRepo(TestReadRepo):
         self.expected_info['remote_count'] = 1
         # the following properties should always be true for bare repos:
         if self.commit_count == 0:
-            self.expected_info['branch_name'] = scanner.NO_BRANCH_DISPLAY_NAME
+            self.expected_info['branch_name'] = read.NO_BRANCH_DISPLAY_NAME
         else:
             self.expected_info['branch_name'] = self.active_branch
         self.expected_info['bare'] = True

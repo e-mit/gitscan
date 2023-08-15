@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from gitscan.scanner import scanner
+from gitscan.scanner import read
 
 
 class TestExtractRepoName(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestExtractRepoName(unittest.TestCase):
         for i in range(len(self.git_dir)):
             with self.subTest(i=i):
                 (repo_name, repo_path,
-                 containing_path) = scanner.extract_repo_name(
+                 containing_path) = read.extract_repo_name(
                                         Path(self.git_dir[i]))
                 self.assertEqual(repo_name, self.actual_repo_name[i])
                 self.assertEqual(repo_path, self.actual_repo_path[i])
@@ -30,7 +30,7 @@ class TestExtractRepoName(unittest.TestCase):
         for i in range(len(self.git_dir)):
             with self.subTest(i=i):
                 (repo_name, repo_path,
-                 containing_path) = scanner.extract_repo_name(
+                 containing_path) = read.extract_repo_name(
                                                 self.git_dir[i])
                 self.assertEqual(repo_name, self.actual_repo_name[i])
                 self.assertEqual(repo_path, self.actual_repo_path[i])

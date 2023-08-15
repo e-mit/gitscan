@@ -4,7 +4,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import shutil
 
-from gitscan.scanner import scanner
+from gitscan.scanner import read
 from tests import test_helpers
 
 
@@ -37,9 +37,9 @@ class TestReadRepo(unittest.TestCase):
                                             self.working_tree_changes,
                                             self.detached_head)
         if self.detached_head:
-            expected_branch_name = scanner.DETACHED_BRANCH_DISPLAY_NAME
+            expected_branch_name = read.DETACHED_BRANCH_DISPLAY_NAME
         elif self.commit_count == 0:
-            expected_branch_name = scanner.NO_BRANCH_DISPLAY_NAME
+            expected_branch_name = read.NO_BRANCH_DISPLAY_NAME
         else:
             expected_branch_name = self.active_branch
         self.expected_info = {
@@ -71,7 +71,7 @@ class TestReadRepo(unittest.TestCase):
 
     def test_read_repo(self) -> None:
         self.update_uptodate()
-        info: dict[str, Any] = scanner.read_repo(self.path_to_git)
+        info: dict[str, Any] = read.read_repo(self.path_to_git)
         last_commit_datetime = info.pop('last_commit_datetime')
         with self.subTest(key='last_commit_datetime'):
             if (self.commit_count == 0):
