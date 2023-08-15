@@ -2,6 +2,8 @@ from pathlib import Path
 import tempfile
 import uuid
 from git import Repo  # type: ignore
+from random import random
+from random import randrange
 
 
 def make_path_to_git(containing_dir: Path | str, repo_name: str,
@@ -26,6 +28,28 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
                          detached_head: bool) -> tuple[Path, Path, Path]:
     """Create a git repo in a temporary directory"""
     containing_dir = Path(tempfile.mkdtemp())
+    (repo_dir, path_to_git) = create_git_repo(containing_dir,
+                                              repo_name, commit_count,
+                                              extra_branches,
+                                              tag_count, stash,
+                                              active_branch,
+                                              untracked_count,
+                                              index_changes,
+                                              working_tree_changes,
+                                              detached_head)
+    return (containing_dir, repo_dir, path_to_git)
+
+
+def create_git_repo(containing_dir: Path,
+                    repo_name: str, commit_count: int,
+                    extra_branches: list[str],
+                    tag_count: int, stash: bool,
+                    active_branch: str,
+                    untracked_count: int,
+                    index_changes: bool,
+                    working_tree_changes: bool,
+                    detached_head: bool) -> tuple[Path, Path]:
+    """Create a git repo in a specified directory"""
     (path_to_git, repo_dir) = make_path_to_git(containing_dir, repo_name,
                                                bare=False)
     repo = Repo.init(repo_dir)
@@ -74,7 +98,7 @@ def create_temp_git_repo(repo_name: str, commit_count: int,
         repo.index.add([file_name])
 
     repo.close()
-    return (containing_dir, repo_dir, path_to_git)
+    return (repo_dir, path_to_git)
 
 
 def create_temp_clone_git_repo(origin_repo_dir: str | Path,
@@ -117,3 +141,28 @@ def do_commits(repo: Repo, repo_dir: Path, commit_count: int) -> None:
         (repo_dir / file_name).touch()
         repo.index.add([file_name])
         repo.index.commit(f"Commit {i}: {file_name}")
+
+
+def create_random_repo(containing_dir: Path) -> Path:
+    repo_name = str(uuid.uuid4())
+    commit_count = randrange(3)  # nosec
+    extra_branches: list[str] = []
+    tag_count = randrange(3)  # nosec
+    stash = random() < 0.5  # nosec
+    active_branch = 'main'
+    untracked_count = randrange(3)  # nosec
+    index_changes = random() < 0.5  # nosec
+    working_tree_changes = random() < 0.5  # nosec
+    detached_head = random() < 0.5  # nosec
+    (_, path_to_git) = create_git_repo(
+                                    containing_dir,
+                                    repo_name,
+                                    commit_count,
+                                    extra_branches,
+                                    tag_count, stash,
+                                    active_branch,
+                                    untracked_count,
+                                    index_changes,
+                                    working_tree_changes,
+                                    detached_head)
+    return path_to_git
