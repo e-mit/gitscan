@@ -54,51 +54,39 @@ class TestReadRepoWithRemotes(TestReadRepo):
 
 
 class TestReadRepoWithMultipleRemotes(TestReadRepoWithRemotes):
-    def setUp(self) -> None:
-        self.remote_count = 2
-        self.behind_each_remote_count = [0]*self.remote_count
-        super().setUp()
+    remote_count = 2
+    behind_each_remote_count = [0]*remote_count
 
 
 class TestReadRepoWithManyRemotes(TestReadRepoWithRemotes):
-    def setUp(self) -> None:
-        self.remote_count = 4
-        self.behind_each_remote_count = [0]*self.remote_count
-        self.extra_branches = ['dev', 'test']
-        self.active_branch = 'dev'
-        self.working_tree_changes = True
-        self.untracked_count = 4
-        self.index_changes = True
-        self.tag_count = 2
-        self.stash = True
-        super().setUp()
+    remote_count = 4
+    behind_each_remote_count = [0]*remote_count
+    extra_branches = ['dev', 'test']
+    active_branch = 'dev'
+    working_tree_changes = True
+    untracked_count = 4
+    index_changes = True
+    tag_count = 2
+    stash = True
 
 
 class TestReadRepoAheadOfRemotes(TestReadRepoWithRemotes):
-    def setUp(self) -> None:
-        self.ahead_count = 3
-        super().setUp()
+    ahead_count = 3
 
 
 class TestReadRepoBehindRemotes(TestReadRepoWithRemotes):
-    def setUp(self) -> None:
-        self.behind_each_remote_count = [3]
-        super().setUp()
+    behind_each_remote_count = [3]
 
 
 class TestReadRepoBehindManyRemotes(TestReadRepoWithRemotes):
-    def setUp(self) -> None:
-        self.remote_count = 3
-        self.behind_each_remote_count = [2, 1, 3]
-        super().setUp()
+    remote_count = 3
+    behind_each_remote_count = [2, 1, 3]
 
 
 class TestReadRepoAheadAndBehindRemotes(TestReadRepoWithRemotes):
-    def setUp(self) -> None:
-        self.ahead_count = 2
-        self.remote_count = 4
-        self.behind_each_remote_count = [1, 3, 1, 0]
-        super().setUp()
+    ahead_count = 2
+    remote_count = 4
+    behind_each_remote_count = [1, 3, 1, 0]
 
 
 class TestReadRepoFailFetch(TestReadRepoWithRemotes):

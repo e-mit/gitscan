@@ -37,95 +37,67 @@ class TestReadBareRepo(TestReadRepo):
 
 
 class TestReadBareRepoStash(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.stash = True
-        super().setUp()
+    stash = True
 
 
 class TestReadBareRepoBranches(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.extra_branches = ['dev', 'test']
-        super().setUp()
+    extra_branches = ['dev', 'test']
 
 
 class TestReadBareRepoTags(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.tag_count = 3
-        super().setUp()
+    tag_count = 3
 
 
 class TestReadBareRepoActiveBranch(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.extra_branches = ['dev', 'test']
-        self.active_branch = 'dev'
-        super().setUp()
+    extra_branches = ['dev', 'test']
+    active_branch = 'dev'
 
 
 class TestReadBareRepoUntracked(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.untracked_count = 2
-        super().setUp()
+    untracked_count = 2
 
 
 class TestReadBareRepoIndex(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.index_changes = True
-        super().setUp()
+    index_changes = True
 
 
 class TestReadBareRepoWorkingTree(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.working_tree_changes = True
-        super().setUp()
+    working_tree_changes = True
 
 
 class TestReadBareRepoDetachedHead(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.detached_head = True
-        super().setUp()
+    detached_head = True
 
 
 class TestReadBareRepoUntrackedModified(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.extra_branches = ['dev']
-        self.active_branch = 'dev'
-        self.working_tree_changes = True
-        self.untracked_count = 4
-        super().setUp()
+    extra_branches = ['dev']
+    active_branch = 'dev'
+    working_tree_changes = True
+    untracked_count = 4
 
 
 class TestReadBareRepoUntrackedIndex(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.index_changes = True
-        self.untracked_count = 3
-        super().setUp()
+    index_changes = True
+    untracked_count = 3
 
 
 class TestReadBareRepoDetachedIndex(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.index_changes = True
-        self.detached_head = True
-        super().setUp()
+    index_changes = True
+    detached_head = True
 
 
 class TestReadBareRepoNoCommits(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.commit_count = 0
-        super().setUp()
+    commit_count = 0
 
 
 class TestReadBareRepoNoCommitsUntracked(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.commit_count = 0
-        self.untracked_count = 1
-        super().setUp()
+    commit_count = 0
+    untracked_count = 1
 
 
 class TestReadBareRepoNoCommitsIndex(TestReadBareRepo):
-    def setUp(self) -> None:
-        self.commit_count = 0
-        self.index_changes = True
-        super().setUp()
+    commit_count = 0
+    index_changes = True
 
 
 if __name__ == '__main__':
