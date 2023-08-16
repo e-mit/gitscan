@@ -90,95 +90,67 @@ class TestReadRepo(unittest.TestCase):
 
 
 class TestReadRepoStash(TestReadRepo):
-    def setUp(self) -> None:
-        self.stash = True
-        super().setUp()
+    stash = True
 
 
 class TestReadRepoBranches(TestReadRepo):
-    def setUp(self) -> None:
-        self.extra_branches = ['dev', 'test']
-        super().setUp()
+    extra_branches = ['dev', 'test']
 
 
 class TestReadRepoTags(TestReadRepo):
-    def setUp(self) -> None:
-        self.tag_count = 3
-        super().setUp()
+    tag_count = 3
 
 
 class TestReadRepoActiveBranch(TestReadRepo):
-    def setUp(self) -> None:
-        self.extra_branches = ['dev', 'test']
-        self.active_branch = 'dev'
-        super().setUp()
+    extra_branches = ['dev', 'test']
+    active_branch = 'dev'
 
 
 class TestReadRepoUntracked(TestReadRepo):
-    def setUp(self) -> None:
-        self.untracked_count = 2
-        super().setUp()
+    untracked_count = 2
 
 
 class TestReadRepoIndex(TestReadRepo):
-    def setUp(self) -> None:
-        self.index_changes = True
-        super().setUp()
+    index_changes = True
 
 
 class TestReadRepoWorkingTree(TestReadRepo):
-    def setUp(self) -> None:
-        self.working_tree_changes = True
-        super().setUp()
+    working_tree_changes = True
 
 
 class TestReadRepoDetachedHead(TestReadRepo):
-    def setUp(self) -> None:
-        self.detached_head = True
-        super().setUp()
+    detached_head = True
 
 
 class TestReadRepoUntrackedModified(TestReadRepo):
-    def setUp(self) -> None:
-        self.extra_branches = ['dev']
-        self.active_branch = 'dev'
-        self.working_tree_changes = True
-        self.untracked_count = 4
-        super().setUp()
+    extra_branches = ['dev']
+    active_branch = 'dev'
+    working_tree_changes = True
+    untracked_count = 4
 
 
 class TestReadRepoUntrackedIndex(TestReadRepo):
-    def setUp(self) -> None:
-        self.index_changes = True
-        self.untracked_count = 3
-        super().setUp()
+    index_changes = True
+    untracked_count = 3
 
 
 class TestReadRepoDetachedIndex(TestReadRepo):
-    def setUp(self) -> None:
-        self.index_changes = True
-        self.detached_head = True
-        super().setUp()
+    index_changes = True
+    detached_head = True
 
 
 class TestReadRepoNoCommits(TestReadRepo):
-    def setUp(self) -> None:
-        self.commit_count = 0
-        super().setUp()
+    commit_count = 0
 
 
 class TestReadRepoNoCommitsUntracked(TestReadRepo):
-    def setUp(self) -> None:
-        self.commit_count = 0
-        self.untracked_count = 1
-        super().setUp()
+    commit_count = 0
+    untracked_count = 1
 
 
 class TestReadRepoNoCommitsIndex(TestReadRepo):
-    def setUp(self) -> None:
-        self.commit_count = 0
-        self.index_changes = True
-        super().setUp()
+    commit_count = 0
+    index_changes = True
 
 
 if __name__ == '__main__':
