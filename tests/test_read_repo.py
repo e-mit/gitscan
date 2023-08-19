@@ -9,6 +9,7 @@ from tests import test_helpers
 
 
 MAX_EXPECTED_TEST_COMMIT_AGE_S = 20.0
+READ_COMMIT_COUNT = 3
 
 
 class TestReadRepo(unittest.TestCase):
@@ -24,7 +25,19 @@ class TestReadRepo(unittest.TestCase):
     working_tree_changes = False
     detached_head = False
 
+    def calculate_expected_commits(self):
+        if self.commit_count == 0:
+            self.total_commits = 0
+        else:
+            self.total_commits = self.commit_count
+            if self.active_branch != 'main':
+                self.total_commits += (1 +
+                            self.extra_branches.index(self.active_branch))
+        if self.detached_head:
+            self.total_commits -= self.commit_count - 1
+
     def setUp(self) -> None:
+        self.calculate_expected_commits()
         (self.containing_dir, self.repo_dir,
          self.path_to_git) = test_helpers.create_temp_git_repo(
                                             self.repo_name,
@@ -87,6 +100,15 @@ class TestReadRepo(unittest.TestCase):
         for k in self.expected_info:
             with self.subTest(key=k):
                 self.assertEqual(info[k], self.expected_info[k])
+
+    def test_read_commits(self) -> None:
+        commits = read.read_commits(self.path_to_git, READ_COMMIT_COUNT)
+        expected_commit_count = min([READ_COMMIT_COUNT,
+                                     self.total_commits])
+        self.assertEqual(expected_commit_count, len(commits))
+        for i in range(len(commits)):
+            with self.subTest(i=i):
+                self.assertNotIn("\n", commits[i]['summary'])
 
 
 class TestReadRepoStash(TestReadRepo):

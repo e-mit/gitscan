@@ -93,3 +93,29 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
     info['up_to_date'] = ((info['behind_count'] == 0) and
                           (info['ahead_count'] == 0))
     return info
+
+
+def read_commits(path_to_git: str | Path,
+                 commit_count: int) -> list[dict[str, str]]:
+    """Get the most recent commit information from the repo.
+
+    Return up to 'commit_count' commits, or fewer if not available.
+    """
+    repo = Repo(path_to_git)
+    commits: list[dict[str, str]] = []
+    try:
+        iter_commits = repo.iter_commits()
+    except ValueError:
+        # occurs with no commits
+        return commits
+
+    for i, commit in enumerate(iter_commits):
+        if (i == commit_count):
+            break
+        commit_data = {}
+        commit_data['hash'] = f"Commit: {commit}"
+        commit_data['author'] = f"Author: {commit.committer}"
+        commit_data['date'] = f"Date:   {commit.committed_datetime}"
+        commit_data['summary'] = f"    {str(commit.summary)}"
+        commits.append(commit_data)
+    return commits

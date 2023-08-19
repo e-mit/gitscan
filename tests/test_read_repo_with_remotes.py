@@ -34,6 +34,7 @@ class TestReadRepoWithRemotes(TestReadRepo):
             test_helpers.add_remote(self.path_to_git, f"remote{rem}",
                                     self.remote_repo_dir[rem])
         test_helpers.create_commits(self.repo_dir, self.ahead_count)
+        self.total_commits += self.ahead_count
         self.expected_info['name'] = self.clone_repo_name
         self.expected_info['containing_dir'] = self.containing_dir
         # the following properties apply to the clones, irrespective of origin:

@@ -140,7 +140,9 @@ def do_commits(repo: Repo, repo_dir: Path, commit_count: int) -> None:
         file_name = str(uuid.uuid4())
         (repo_dir / file_name).touch()
         repo.index.add([file_name])
-        repo.index.commit(f"Commit {i}: {file_name}")
+        repo.index.commit(f"""Commit {i}: {file_name}.
+                          
+                          This is a multiline string.""")
 
 
 def create_random_repo(containing_dir: Path) -> Path:
