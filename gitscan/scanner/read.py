@@ -121,16 +121,3 @@ def read_commits(path_to_git: str | Path,
             commits.append(commit_data)
     repo.close()
     return commits
-
-
-def make_commit_summary(path_to_git: str | Path,
-                        commit_count: int) -> str:
-    summary = ""
-    for c in read_commits(path_to_git, commit_count):
-        summary += (
-            f"Commit: {c['hash']}\n"
-            f"Author: {c['author']}\n"
-            f"Date:   {c['date']}\n\n"
-            f"        {c['summary']}\n\n"
-        )
-    return summary

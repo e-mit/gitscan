@@ -1,6 +1,7 @@
 import sys
 from PyQt6.QtWidgets import QMainWindow, QApplication
 from PyQt6.QtCore import Qt, QStringListModel, QAbstractListModel, QModelIndex, pyqtSlot
+from PyQt6.QtGui import QFont
 
 from gui.test1 import Ui_MainWindow
 from scanner import search, read
@@ -21,13 +22,22 @@ class MyModel(QAbstractListModel):
     def rowCount(self, index) -> int:
         return len(self.repo_list)
 
-    def get_commit(self, index) -> str:
-        # self.string_list[index.row()] = "hi"
-        # NB: the gui will update automatically after data changes
-        # but can do it quicker with: 
-        # self.dataChanged.emit(index, index)
-        return read.make_commit_summary(self.repo_list[index.row()],
+    def get_commit_html(self, index) -> str:
+        commit_data = read.read_commits(self.repo_list[index.row()],
                                         VIEW_COMMIT_COUNT)
+        summary = ""
+        for c in commit_data:
+            summary += (
+                "<pre>"
+                f"<a style='color:orange;'>Commit: {c['hash']}</a>"
+                f"<p>Author: {c['author']}</p>"
+                f"<a>Date:   {c['date']}</a><br>"
+                f"<p>        {c['summary']}</p>"
+                "<a> </a><br>"
+                "</pre>"
+            )
+        return summary
+
 
     def get_data(self) -> None:
         self.repo_list = search.find_git_repos("/tmp")
@@ -39,16 +49,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle("Gitscan:  a git repository status viewer")
+        self.set_default_commit_text_format()
         self.model = MyModel()
         self.listView.setModel(self.model)
         self.listView.selectionModel().selectionChanged.connect(
                                             self.selection_changed)
         self.model.get_data()
 
+    def set_default_commit_text_format(self):
+        font = QFont()
+        font.setStyleHint(QFont.StyleHint.Monospace)
+        font.setFamily('monospace')
+        self.plainTextEdit.setFont(font)
+        self.plainTextEdit.setStyleSheet("QPlainTextEdit {"
+                                         "background-color: black;"
+                                         "color : white;}")
+
     def selection_changed(self) -> None:
-        commit_text = self.model.get_commit(
+        commit_html_text = self.model.get_commit_html(
                             self.listView.selectionModel().currentIndex())
-        self.plainTextEdit.setPlainText(commit_text)
+        self.plainTextEdit.clear()
+        self.plainTextEdit.appendHtml(commit_html_text)
 
 
 if __name__ == "__main__":
