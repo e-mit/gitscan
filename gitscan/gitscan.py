@@ -24,7 +24,7 @@ class MyModel(QAbstractListModel):
         # NB: the gui will update automatically after data changes
         # but can do it quicker with: 
         # self.dataChanged.emit(index, index)
-        return self.string_list[index.row()]
+        return ("Commit: " + self.string_list[index.row()])
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -32,13 +32,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.setWindowTitle("Gitscan:  a git repository status viewer")
         self.model = MyModel()
         self.listView.setModel(self.model)
-        self.plainTextEdit.setPlainText("Welcome")
-        self.listView.clicked[QModelIndex].connect(self.on_clicked)
+        self.listView.selectionModel().selectionChanged.connect(self.selection_changed)
 
-    def on_clicked(self, index):
-        self.plainTextEdit.setPlainText(self.model.get_commit(index))
+    def selection_changed(self):
+        commit_text = self.model.get_commit(self.listView.selectionModel().currentIndex())
+        self.plainTextEdit.setPlainText(commit_text)
 
 
 if __name__ == "__main__":
