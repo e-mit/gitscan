@@ -92,6 +92,7 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
     info['ahead_count'] = 0 if not ahead_counts else min(ahead_counts)
     info['up_to_date'] = ((info['behind_count'] == 0) and
                           (info['ahead_count'] == 0))
+    repo.close()
     return info
 
 
@@ -107,15 +108,29 @@ def read_commits(path_to_git: str | Path,
         iter_commits = repo.iter_commits()
     except ValueError:
         # occurs with no commits
-        return commits
-
-    for i, commit in enumerate(iter_commits):
-        if (i == commit_count):
-            break
-        commit_data = {}
-        commit_data['hash'] = f"Commit: {commit}"
-        commit_data['author'] = f"Author: {commit.committer}"
-        commit_data['date'] = f"Date:   {commit.committed_datetime}"
-        commit_data['summary'] = f"    {str(commit.summary)}"
-        commits.append(commit_data)
+        pass
+    else:
+        for i, commit in enumerate(iter_commits):
+            if (i == commit_count):
+                break
+            commit_data = {}
+            commit_data['hash'] = str(commit)
+            commit_data['author'] = str(commit.committer)
+            commit_data['date'] = str(commit.committed_datetime)
+            commit_data['summary'] = str(commit.summary)
+            commits.append(commit_data)
+    repo.close()
     return commits
+
+
+def make_commit_summary(path_to_git: str | Path,
+                        commit_count: int) -> str:
+    summary = ""
+    for c in read_commits(path_to_git, commit_count):
+        summary += (
+            f"Commit: {c['hash']}\n"
+            f"Author: {c['author']}\n"
+            f"Date:   {c['date']}\n\n"
+            f"        {c['summary']}\n\n"
+        )
+    return summary
