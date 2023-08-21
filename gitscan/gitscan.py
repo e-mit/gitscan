@@ -217,6 +217,12 @@ class MyModel(QAbstractTableModel):
                          str(self.repo_data_list[index.row()]['repo_dir'])])
             myProcess.waitForFinished(-1)
 
+    def headerData(self, section, orient: Qt.Orientation, role):
+        if (role == Qt.ItemDataRole.DisplayRole and
+            orient == Qt.Orientation.Horizontal):
+            return f"H {section}"
+
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Main window."""
     def __init__(self):
