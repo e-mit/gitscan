@@ -1,6 +1,6 @@
 import sys
 from typing import Any
-from PyQt6.QtWidgets import QMainWindow, QApplication
+from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
 from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices
 
@@ -9,6 +9,10 @@ import arrow
 from gui.test_table import Ui_MainWindow
 from scanner import search, read
 
+APP_TITLE = "Gitscan"
+APP_SUBTITLE = "a git repository status viewer"
+APP_VERSION = "0.1.0"
+PROJECT_GITHUB_URL = "https://github.com/e-mit/gitscan"
 VIEW_COMMIT_COUNT = 3  # Show (at most) this many commits in the lower pane
 OPEN_FOLDER_COLUMN = 14
 OPEN_DIFFTOOL_COLUMN = OPEN_FOLDER_COLUMN + 1
@@ -140,7 +144,7 @@ class MyModel(QAbstractTableModel):
             raise ValueError("Only supports Display and Tooltip roles.")
 
     def rowCount(self, index) -> int:
-        return len(self.repo_list)
+        return len(self.repo_data_list)
     
     def columnCount(self, index) -> int:
         return 18
@@ -172,9 +176,13 @@ class MyModel(QAbstractTableModel):
                 "</pre>"
             )
         return summary
-
-    def get_data(self) -> None:
+    
+    def search_and_read_repos(self) -> None:
         self.repo_list = search.find_git_repos("/tmp")
+        self.refresh_data()
+
+    def refresh_data(self) -> None:
+        self.repo_data_list = []
         for repo in self.repo_list:
             self.repo_data_list.append(read.read_repo(repo))
         self.layoutChanged.emit()
@@ -214,14 +222,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.setWindowTitle("Gitscan:  a git repository status viewer")
+        self.setWindowTitle(APP_TITLE + ": " + APP_SUBTITLE)
         self.set_default_commit_text_format()
         self.model = MyModel()
         self.tableView.setModel(self.model)
-        self.tableView.selectionModel().selectionChanged.connect(
-                                           self.selection_changed)
-        self.tableView.clicked.connect(self.model.table_clicked)
-        self.model.get_data()
+        self.connect_gui_signals()
+        self.model.search_and_read_repos()
 
     def set_default_commit_text_format(self) -> None:
         font = QFont()
@@ -237,6 +243,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                             self.tableView.selectionModel().currentIndex())
         self.plainTextEdit.clear()
         self.plainTextEdit.appendHtml(commit_html_text)
+
+    def connect_gui_signals(self):
+        self.tableView.selectionModel().selectionChanged.connect(
+                                           self.selection_changed)
+        self.tableView.clicked.connect(self.model.table_clicked)
+        self.actionExit.triggered.connect(self.close)  # type: ignore
+        self.actionVisit_GitHub.triggered.connect(self.visit_github)
+        self.actionAbout.triggered.connect(self.help_about)
+        self.actionRefresh_all.triggered.connect(self.model.refresh_data)
+        self.actionRefresh_all.setShortcut("F5")
+
+    def visit_github(self):
+        QDesktopServices.openUrl(QUrl(PROJECT_GITHUB_URL))
+
+    def help_about(self):
+        QMessageBox.about(
+            self,
+            "About",
+            f"<p>{APP_TITLE}</p>"
+            f"<p>Version {APP_VERSION}</p>"
+            f"<p>{APP_SUBTITLE.capitalize()}</p>"
+            "<p>Built with PyQt and Qt Designer</p>"
+            f"<a href='{PROJECT_GITHUB_URL}'>View the code on GitHub</a>"
+        )
 
 
 if __name__ == "__main__":
