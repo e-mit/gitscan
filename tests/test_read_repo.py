@@ -58,6 +58,7 @@ class TestReadRepo(unittest.TestCase):
         self.expected_info = {
             'name': self.repo_name,
             'containing_dir': self.containing_dir,
+            'repo_dir': self.repo_dir,
             'bare': False,
             'remote_count': 0,
             'branch_count': (0 if self.commit_count == 0

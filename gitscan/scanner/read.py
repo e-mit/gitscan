@@ -35,7 +35,8 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
     """
     repo = Repo(path_to_git)
     info: dict[str, Any] = {}
-    (info['name'], _, info['containing_dir']) = extract_repo_name(path_to_git)
+    (info['name'], info['repo_dir'],
+     info['containing_dir']) = extract_repo_name(path_to_git)
     info['bare'] = repo.bare
     info['detached_head'] = repo.head.is_detached
     info['remote_count'] = len(repo.remotes)

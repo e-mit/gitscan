@@ -18,6 +18,7 @@ class TestReadBareRepo(TestReadRepo):
                                 self.repo_dir, bare_repo_name, bare=True)
         self.expected_info['name'] = bare_repo_name
         self.expected_info['containing_dir'] = self.containing_dir
+        self.expected_info['repo_dir'] = self.repo_dir
         self.expected_info['remote_count'] = 1
         # the following properties should always be true for bare repos:
         if self.commit_count == 0:

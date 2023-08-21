@@ -37,6 +37,7 @@ class TestReadRepoWithRemotes(TestReadRepo):
         self.total_commits += self.ahead_count
         self.expected_info['name'] = self.clone_repo_name
         self.expected_info['containing_dir'] = self.containing_dir
+        self.expected_info['repo_dir'] = self.repo_dir
         # the following properties apply to the clones, irrespective of origin:
         self.expected_info['bare'] = False
         self.expected_info['remote_count'] = self.remote_count
