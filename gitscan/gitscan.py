@@ -1,6 +1,7 @@
 import sys
 from typing import Any
-from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
+from pathlib import Path
+from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox, QFileDialog, QLineEdit, QInputDialog
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
 from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices
 
@@ -177,8 +178,8 @@ class MyModel(QAbstractTableModel):
             )
         return summary
     
-    def search_and_read_repos(self) -> None:
-        self.repo_list = search.find_git_repos("/tmp")
+    def search_and_read_repos(self, root_directory: str | Path) -> None:
+        self.repo_list = search.find_git_repos(root_directory)
         self.refresh_data()
 
     def refresh_data(self) -> None:
@@ -227,13 +228,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     """Main window."""
     def __init__(self):
         super().__init__()
+        self.search_path_str = ""
         self.setupUi(self)
-        self.setWindowTitle(APP_TITLE + ": " + APP_SUBTITLE)
+        self.setWindowTitle(APP_TITLE + ":  " + APP_SUBTITLE)
         self.set_default_commit_text_format()
         self.model = MyModel()
         self.tableView.setModel(self.model)
-        self.connect_gui_signals()
-        self.model.search_and_read_repos()
+        self.connect_signals()
 
     def set_default_commit_text_format(self) -> None:
         font = QFont()
@@ -250,7 +251,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.plainTextEdit.clear()
         self.plainTextEdit.appendHtml(commit_html_text)
 
-    def connect_gui_signals(self):
+    def connect_signals(self):
         self.tableView.selectionModel().selectionChanged.connect(
                                            self.selection_changed)
         self.tableView.clicked.connect(self.model.table_clicked)
@@ -259,6 +260,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionAbout.triggered.connect(self.help_about)
         self.actionRefresh_all.triggered.connect(self.model.refresh_data)
         self.actionRefresh_all.setShortcut("F5")
+        self.actionSearch_for_repositories.triggered.connect(
+            self.search_dialog)
 
     def visit_github(self):
         QDesktopServices.openUrl(QUrl(PROJECT_GITHUB_URL))
@@ -273,6 +276,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "<p>Built with PyQt and Qt Designer</p>"
             f"<a href='{PROJECT_GITHUB_URL}'>View the code on GitHub</a>"
         )
+
+    def search_dialog(self) -> None:
+        (search_path_str, ok) = QInputDialog.getText(
+            self, "Search for repositories",
+            ("Choose the root directory. All directories\n"
+             "below this will be searched (this may be slow)."),
+            QLineEdit.EchoMode.Normal, self.search_path_str,
+            Qt.WindowType.Dialog,
+            Qt.InputMethodHint.ImhNone)
+        if ok and Path(search_path_str).is_dir():
+            self.search_path_str = search_path_str
+            self.model.search_and_read_repos(search_path_str)
 
 
 if __name__ == "__main__":
