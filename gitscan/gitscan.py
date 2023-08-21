@@ -1,15 +1,24 @@
 import sys
 from typing import Any
 from PyQt6.QtWidgets import QMainWindow, QApplication
-from PyQt6.QtCore import Qt, QStringListModel, QAbstractListModel, QModelIndex, pyqtSlot, QAbstractTableModel
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
+from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices
 
 import arrow
 
 from gui.test_table import Ui_MainWindow
 from scanner import search, read
 
-VIEW_COMMIT_COUNT = 3
+VIEW_COMMIT_COUNT = 3  # Show (at most) this many commits in the lower pane
+OPEN_FOLDER_COLUMN = 14
+OPEN_DIFFTOOL_COLUMN = OPEN_FOLDER_COLUMN + 1
+OPEN_TERMINAL_COLUMN = OPEN_FOLDER_COLUMN + 2
+OPEN_IDE_COLUMN = OPEN_FOLDER_COLUMN + 3
+OPEN_FOLDER_ICON = "resources/ex.svg"
+OPEN_DIFFTOOL_ICON = "resources/tick.svg"
+OPEN_TERMINAL_ICON = "resources/tick2.svg"
+OPEN_IDE_ICON = "resources/bag.svg"
+
 
 class MyModel(QAbstractTableModel):
     def __init__(self, *args, **kwargs):
@@ -24,6 +33,15 @@ class MyModel(QAbstractTableModel):
             return self.display_data(index, Qt.ItemDataRole.ToolTipRole)
         elif role == Qt.ItemDataRole.BackgroundRole:
             return self.row_shading(index)
+        elif role == Qt.ItemDataRole.DecorationRole:
+            if (index.column() == OPEN_FOLDER_COLUMN):
+                return QIcon(OPEN_FOLDER_ICON)
+            elif (index.column() == OPEN_DIFFTOOL_COLUMN):
+                return QIcon(OPEN_DIFFTOOL_ICON)
+            elif (index.column() == OPEN_TERMINAL_COLUMN):
+                return QIcon(OPEN_TERMINAL_ICON)
+            elif (index.column() == OPEN_IDE_COLUMN):
+                return QIcon(OPEN_IDE_ICON)
 
     def display_data(self, index: QModelIndex,
                      role: Qt.ItemDataRole) -> str:
@@ -105,7 +123,15 @@ class MyModel(QAbstractTableModel):
                 data = "-"
             else:
                 data = arrow.get(last_commit_datetime).humanize().capitalize()
-            tooltip = "Last commit"
+            tooltip = "Last commit on active branch"
+        elif (index.column() == OPEN_FOLDER_COLUMN):
+            tooltip = "Open in directory explorer"
+        elif (index.column() == OPEN_DIFFTOOL_COLUMN):
+            tooltip = "Open in difftool"
+        elif (index.column() == OPEN_TERMINAL_COLUMN):
+            tooltip = "Open in terminal"
+        elif (index.column() == OPEN_IDE_COLUMN):
+            tooltip = "Open in IDE"
         if role == Qt.ItemDataRole.DisplayRole:
             return data
         elif role == Qt.ItemDataRole.ToolTipRole:
@@ -117,7 +143,7 @@ class MyModel(QAbstractTableModel):
         return len(self.repo_list)
     
     def columnCount(self, index) -> int:
-        return 14
+        return 18
 
     def row_shading(self, index: QModelIndex) -> QColor:
         if ((self.repo_data_list[index.row()]['untracked_count'] > 0)
@@ -153,6 +179,35 @@ class MyModel(QAbstractTableModel):
             self.repo_data_list.append(read.read_repo(repo))
         self.layoutChanged.emit()
 
+    def table_clicked(self, index: QModelIndex):
+        if index.column() == OPEN_FOLDER_COLUMN:
+            QDesktopServices.openUrl(
+                QUrl("file://"
+                     + str(self.repo_data_list[index.row()]['repo_dir'])))
+        elif index.column() == OPEN_DIFFTOOL_COLUMN:
+            git_args = None
+            if self.repo_data_list[index.row()]['working_tree_changes']:
+                git_args = ["difftool", "--dir-diff"]
+            elif self.repo_data_list[index.row()]['last_commit_datetime'] is not None:
+                git_args = ["difftool", "--dir-diff", "HEAD~1..HEAD"]
+            if git_args is not None:
+                myProcess = QProcess()
+                myProcess.setWorkingDirectory(
+                    str(self.repo_data_list[index.row()]['repo_dir']))
+                myProcess.start("git", git_args)
+                myProcess.waitForFinished(-1)
+        elif index.column() == OPEN_TERMINAL_COLUMN:
+            myProcess = QProcess()
+            myProcess.setWorkingDirectory(
+                str(self.repo_data_list[index.row()]['repo_dir']))
+            myProcess.start("gnome-terminal")
+            myProcess.waitForFinished(-1)
+        elif index.column() == OPEN_IDE_COLUMN:
+            myProcess = QProcess()
+            myProcess.start(
+                "code", ["-n",
+                         str(self.repo_data_list[index.row()]['repo_dir'])])
+            myProcess.waitForFinished(-1)
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Main window."""
@@ -165,6 +220,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tableView.setModel(self.model)
         self.tableView.selectionModel().selectionChanged.connect(
                                            self.selection_changed)
+        self.tableView.clicked.connect(self.model.table_clicked)
         self.model.get_data()
 
     def set_default_commit_text_format(self) -> None:
