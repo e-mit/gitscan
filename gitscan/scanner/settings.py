@@ -4,11 +4,28 @@ import sys
 from pathlib import Path
 from typing import Any
 import json
-
+from enum import Enum, auto
 
 APP_SETTINGS_DIRECTORY_NAME = "gitscan"
 PREFERENCES_FILENAME = "preferences.json"
 REPO_LIST_FILENAME = "repo_list.txt"
+
+
+class Platform(Enum):
+    LINUX = auto()
+    WINDOWS = auto()
+    APPLE = auto()
+
+
+def get_platform() -> Platform:
+    if sys.platform.startswith('win32'):
+        return Platform.WINDOWS
+    elif sys.platform.startswith('linux'):
+        return Platform.LINUX
+    elif sys.platform.startswith('darwin'):
+        return Platform.APPLE
+    else:
+        raise NotImplementedError(f"{sys.platform} not supported")
 
 
 def get_settings_directory() -> Path:
@@ -16,10 +33,11 @@ def get_settings_directory() -> Path:
 
     Directory is platform-dependent. Create it if it does not exist.
     """
-    if sys.platform.startswith('win32'):
+    platform = get_platform()
+    if platform == Platform.WINDOWS:
         settings_dir = (Path(os.environ['APPDATA'])
                         / APP_SETTINGS_DIRECTORY_NAME)
-    elif sys.platform.startswith('linux'):
+    elif platform == Platform.LINUX:
         if 'XDG_CONFIG_HOME' in os.environ:
             settings_dir = (Path(os.environ['XDG_CONFIG_HOME'])
                             / APP_SETTINGS_DIRECTORY_NAME)
@@ -29,14 +47,11 @@ def get_settings_directory() -> Path:
         else:
             settings_dir = (Path(os.environ['HOME'])
                             / ('.' + APP_SETTINGS_DIRECTORY_NAME))
-    elif sys.platform.startswith('darwin'):
-        # Apple macos
+    else:  # platform == Platform.APPLE:
         settings_dir = (Path(os.environ['HOME']) / 'Library' /
                         'Application Support' / APP_SETTINGS_DIRECTORY_NAME)
-    else:
-        raise NotImplementedError(f"{sys.platform} OS not supported")
 
-    if not settings_dir.parent.exists():
+    if not settings_dir.parent.is_dir():
         raise NotADirectoryError(f"{settings_dir.parent} does not exist.")
 
     try:
