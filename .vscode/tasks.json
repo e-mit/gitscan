@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Test",
+      "type": "shell",
+      "command": "${command:python.interpreterPath}",
+      "options": {"cwd": "${workspaceFolder}"},
+      "args": ["-m", "unittest", "discover", "./tests"],
+      "problemMatcher": [],
+      "group": "test",
+      "presentation": {
+        "revealProblems": "onProblem",
+        "close": true
+      }
+    },
+    {
+      "label": "Convert ui",
+      "type": "shell",
+      "command": "./qt_convert.sh",
+      "problemMatcher": [],
+      "options": {"cwd": "${workspaceFolder}/gitscan/gui/"},
+      "presentation": {
+        "revealProblems": "onProblem",
+        "close": true
+      }
+    },
+    {
+      "label": "Run",
+      "type": "shell",
+      "command": "${command:python.interpreterPath}",
+      "args": ["gitscan.py"],
+      "problemMatcher": [],
+      "options": {"cwd": "${workspaceFolder}/gitscan/"},
+      "presentation": {
+        "revealProblems": "onProblem",
+        "close": true
+      }
+    },
+    {
+      "label": "Build",
+      "problemMatcher": [],
+      "dependsOrder": "sequence",
+      "dependsOn": ["Convert ui", "Test"]
+    },
+    {
+      "label": "Build & run",
+      "problemMatcher": [],
+      "dependsOrder": "sequence",
+      "dependsOn": ["Convert ui", "Test", "Run"]
+    }
+  ]
+}
