@@ -1,3 +1,4 @@
+"""Main file for GUI app."""
 import sys
 from typing import Any
 from pathlib import Path
@@ -41,9 +42,9 @@ class MyModel(QAbstractTableModel):
     def data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
         if role == Qt.ItemDataRole.DisplayRole:
-            return self.display_data(index, Qt.ItemDataRole.DisplayRole)
+            return self._display_data(index, Qt.ItemDataRole.DisplayRole)
         elif role == Qt.ItemDataRole.ToolTipRole:
-            return self.display_data(index, Qt.ItemDataRole.ToolTipRole)
+            return self._display_data(index, Qt.ItemDataRole.ToolTipRole)
         elif role == Qt.ItemDataRole.BackgroundRole:
             return self.row_shading(index)
         elif role == Qt.ItemDataRole.DecorationRole:
@@ -56,8 +57,8 @@ class MyModel(QAbstractTableModel):
             elif (index.column() == OPEN_IDE_COLUMN):
                 return QIcon(OPEN_IDE_ICON)
 
-    def display_data(self, index: QModelIndex,
-                     role: Qt.ItemDataRole) -> str:
+    def _display_data(self, index: QModelIndex,
+                      role: Qt.ItemDataRole) -> str:
         data = " "
         tooltip = ""
         if (index.column() == 0):
@@ -277,18 +278,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                            self.repo_selection_changed)
         self.tableView.clicked.connect(self.model.table_clicked)
         self.actionExit.triggered.connect(self.close)  # type: ignore
-        self.actionVisit_GitHub.triggered.connect(self.visit_github)
-        self.actionAbout.triggered.connect(self.help_about)
+        self.actionVisit_GitHub.triggered.connect(self._visit_github)
+        self.actionAbout.triggered.connect(self._help_about)
         self.actionRefresh_all.triggered.connect(self.model.refresh_data)
         self.actionRefresh_all.setShortcut("F5")
         self.actionSearch_for_repositories.triggered.connect(
             self.run_search_dialog)
         self.actionSettings.triggered.connect(self.run_settings_dialog)
 
-    def visit_github(self) -> None:
+    def _visit_github(self) -> None:
         QDesktopServices.openUrl(QUrl(PROJECT_GITHUB_URL))
 
-    def help_about(self) -> None:
+    def _help_about(self) -> None:
         QMessageBox.about(
             self,
             "About",
