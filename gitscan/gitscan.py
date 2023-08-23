@@ -3,9 +3,9 @@ import sys
 from typing import Any
 from pathlib import Path
 from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
-from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
+from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog, QAbstractItemView
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
-from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices
+from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPalette
 
 import arrow
 
@@ -48,7 +48,7 @@ class MyModel(QAbstractTableModel):
         elif role == Qt.ItemDataRole.ToolTipRole:
             return self._display_data(index, Qt.ItemDataRole.ToolTipRole)
         elif role == Qt.ItemDataRole.BackgroundRole:
-            return self.row_shading(index)
+            return QColor(self.row_shading(index))
         elif role == Qt.ItemDataRole.DecorationRole:
             if (index.column() == OPEN_FOLDER_COLUMN):
                 return QIcon(OPEN_FOLDER_ICON)
@@ -167,18 +167,18 @@ class MyModel(QAbstractTableModel):
         """Part of the Qt model interface."""
         return TOTAL_COLUMNS
 
-    def row_shading(self, index: QModelIndex) -> QColor:
-        """Colour the rows of the repo list to indicate status."""
+    def row_shading(self, index: QModelIndex) -> str:
+        """Get row colour for the repo list to indicate status."""
         if ((self.repo_data[index.row()]['untracked_count'] > 0)
                 or self.repo_data[index.row()]['working_tree_changes']
                 or self.repo_data[index.row()]['index_changes']):
-            return QColor("red")
+            return "red"
         elif (self.repo_data[index.row()]['behind_count'] > 0):
-            return QColor("yellow")
+            return "yellow"
         elif (self.repo_data[index.row()]['ahead_count'] > 0):
-            return QColor("green")
+            return "green"
         else:
-            return QColor("white")
+            return "white"
 
     def get_commit_html(self, index: QModelIndex) -> str:
         """Provide a formatted view of the most recent commits."""
@@ -266,12 +266,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle(APP_TITLE + ":  " + APP_SUBTITLE)
-        self.set_default_commit_text_format()
+        self._set_default_commit_text_format()
         self.model = MyModel()
         self.tableView.setModel(self.model)
-        self.connect_signals()
+        self._format_table()
+        self._connect_signals()
 
-    def set_default_commit_text_format(self) -> None:
+    def _set_table_selection_style(self, colour: str) -> None:
+        self.tableView.setStyleSheet("QTableView::item:selected {"
+                                     "border-width: 4px 0 4px 0;"
+                                     "border-style: solid;"
+                                     "border-color: black;}"
+                                     "QTableView {"
+                                     "selection-color: black;"
+                                     "selection-background-color:"
+                                     f" {colour};}}")
+
+    def _format_table(self) -> None:
+        self.tableView.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows)
+        self.tableView.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection)
+
+    def _set_default_commit_text_format(self) -> None:
         """Format the lower display pane appearance."""
         font = QFont()
         font.setStyleHint(QFont.StyleHint.Monospace)
@@ -281,17 +298,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                          "background-color: black;"
                                          "color : white;}")
 
-    def display_commit_text(self) -> None:
+    def _display_commit_text(self) -> None:
         """Run when selected repo, or its data, changes."""
-        commit_html_text = self.model.get_commit_html(
-                            self.tableView.selectionModel().currentIndex())
+        index = self.tableView.selectionModel().currentIndex()
+        commit_html_text = self.model.get_commit_html(index)
         self.plainTextEdit.clear()
         self.plainTextEdit.appendHtml(commit_html_text)
+        self._set_table_selection_style(self.model.row_shading(index))
 
-    def connect_signals(self) -> None:
+    def _connect_signals(self) -> None:
         """Connect all signals and slots."""
         self.tableView.selectionModel().selectionChanged.connect(
-                                           self.display_commit_text)
+                                           self._display_commit_text)
         self.tableView.clicked.connect(self.model.table_clicked)
         self.actionExit.triggered.connect(self.close)  # type: ignore
         self.actionVisit_GitHub.triggered.connect(self._visit_github)
@@ -299,10 +317,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionRefresh_all.triggered.connect(self.model.refresh_all_data)
         self.actionRefresh_all.setShortcut("F5")
         self.actionSearch_for_repositories.triggered.connect(
-            self.run_search_dialog)
-        self.actionSettings.triggered.connect(self.run_settings_dialog)
-        self.model.dataChanged.connect(self.display_commit_text)
-        self.model.layoutChanged.connect(self.display_commit_text)
+            self._run_search_dialog)
+        self.actionSettings.triggered.connect(self._run_settings_dialog)
+        self.model.dataChanged.connect(self._display_commit_text)
+        self.model.layoutChanged.connect(self._display_commit_text)
 
     def _visit_github(self) -> None:
         QDesktopServices.openUrl(QUrl(PROJECT_GITHUB_URL))
@@ -318,7 +336,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f"<a href='{PROJECT_GITHUB_URL}'>View the code on GitHub</a>"
         )
 
-    def run_search_dialog(self) -> None:
+    def _run_search_dialog(self) -> None:
         """Dialog for repository search."""
         (search_path_str, ok) = QInputDialog.getText(
             self, "Search for repositories",
@@ -331,7 +349,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.model.search_and_read_repos(search_path_str)
             self.model.settings.set_search_path(search_path_str)
 
-    def run_settings_dialog(self) -> None:
+    def _run_settings_dialog(self) -> None:
         """Launch dialog to get/update/display user-selected settings."""
         settings_ui = SettingsWindow(self.model.settings)
         settings_ui.exec()
