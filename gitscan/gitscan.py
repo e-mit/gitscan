@@ -1,14 +1,17 @@
 import sys
 from typing import Any
 from pathlib import Path
-from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox, QFileDialog, QLineEdit, QInputDialog
+from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
+from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
 from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices
 
 import arrow
 
 from gui.test_table import Ui_MainWindow
-from scanner import search, read
+from gui.settings_dialog import Ui_Dialog
+from scanner import search, read, settings
+from scanner.settings import AppSettings
 
 APP_TITLE = "Gitscan"
 APP_SUBTITLE = "a git repository status viewer"
@@ -26,12 +29,15 @@ OPEN_IDE_ICON = "resources/bag.svg"
 
 
 class MyModel(QAbstractTableModel):
+    """Model part of Qt model-view, for containing data."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.repo_list = []
-        self.repo_data_list = []
+        self.settings = settings.AppSettings()
+        self.refresh_data()
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Any:
+        """Part of the Qt model interface."""
         if role == Qt.ItemDataRole.DisplayRole:
             return self.display_data(index, Qt.ItemDataRole.DisplayRole)
         elif role == Qt.ItemDataRole.ToolTipRole:
@@ -53,53 +59,53 @@ class MyModel(QAbstractTableModel):
         data = " "
         tooltip = ""
         if (index.column() == 0):
-            data = str(self.repo_data_list[index.row()]['containing_dir'])
+            data = str(self.repo_data[index.row()]['containing_dir'])
             tooltip = "Containing directory"
         elif (index.column() == 1):
-            data = self.repo_data_list[index.row()]['name']
+            data = self.repo_data[index.row()]['name']
             tooltip = "Repository name"
         elif (index.column() == 2):
-            untracked_count = self.repo_data_list[index.row()]['untracked_count']
+            untracked_count = self.repo_data[index.row()]['untracked_count']
             if untracked_count > 0:
                 data = "U"
                 tooltip = str(untracked_count) + " untracked "
                 tooltip += "file" if (untracked_count == 1) else "files"
         elif (index.column() == 3):
-            if self.repo_data_list[index.row()]['working_tree_changes']:
+            if self.repo_data[index.row()]['working_tree_changes']:
                 data = "M"
                 tooltip = "Modified working tree"
         elif (index.column() == 4):
-            if self.repo_data_list[index.row()]['bare']:
+            if self.repo_data[index.row()]['bare']:
                 data = "B"
                 tooltip = "Bare repository"
         elif (index.column() == 5):
-            if self.repo_data_list[index.row()]['stash']:
+            if self.repo_data[index.row()]['stash']:
                 data = "S"
                 tooltip = "At least one stash"
         elif (index.column() == 6):
-            if self.repo_data_list[index.row()]['index_changes']:
+            if self.repo_data[index.row()]['index_changes']:
                 data = "I"
                 tooltip = "Uncommitted index change(s)"
         elif (index.column() == 7):
-            if self.repo_data_list[index.row()]['ahead_count'] > 0:
+            if self.repo_data[index.row()]['ahead_count'] > 0:
                 data = "˄"
                 tooltip = ("Ahead of remote(s) by "
-                           f"{self.repo_data_list[index.row()]['ahead_count']}"
+                           f"{self.repo_data[index.row()]['ahead_count']}"
                            " commits")
         elif (index.column() == 8):
-            if self.repo_data_list[index.row()]['behind_count'] > 0:
+            if self.repo_data[index.row()]['behind_count'] > 0:
                 data = "˅"
                 tooltip = ("Behind remote(s) by "
-                           f"{self.repo_data_list[index.row()]['behind_count']}"
+                           f"{self.repo_data[index.row()]['behind_count']}"
                            " commits")
         elif (index.column() == 9):
-            tag_count = self.repo_data_list[index.row()]['tag_count']
+            tag_count = self.repo_data[index.row()]['tag_count']
             if tag_count > 0:
                 data = "T"
                 tooltip = str(tag_count)
                 tooltip += " tag" if (tag_count == 1) else " tags"
         elif (index.column() == 10):
-            remote_count = self.repo_data_list[index.row()]['remote_count']
+            remote_count = self.repo_data[index.row()]['remote_count']
             data = str(remote_count)
             data += " remote" if (remote_count == 1) else " remotes"
             if remote_count == 0:
@@ -107,7 +113,7 @@ class MyModel(QAbstractTableModel):
             else:
                 tooltip = data
         elif (index.column() == 11):
-            branch_count = self.repo_data_list[index.row()]['branch_count']
+            branch_count = self.repo_data[index.row()]['branch_count']
             data = str(branch_count)
             data += " branch" if (branch_count == 1) else " branches"
             if branch_count == 0:
@@ -115,15 +121,15 @@ class MyModel(QAbstractTableModel):
             else:
                 tooltip = data
         elif (index.column() == 12):
-            data = self.repo_data_list[index.row()]['branch_name']
-            if self.repo_data_list[index.row()]['detached_head']:
+            data = self.repo_data[index.row()]['branch_name']
+            if self.repo_data[index.row()]['detached_head']:
                 tooltip = "Detached HEAD state"
-            elif self.repo_data_list[index.row()]['branch_count'] == 0:
+            elif self.repo_data[index.row()]['branch_count'] == 0:
                 tooltip = "No branches"
             else:
                 tooltip = "Active branch"
         elif (index.column() == 13):
-            last_commit_datetime = self.repo_data_list[index.row()]['last_commit_datetime']
+            last_commit_datetime = self.repo_data[index.row()]['last_commit_datetime']
             if last_commit_datetime is None:
                 data = "-"
             else:
@@ -144,26 +150,30 @@ class MyModel(QAbstractTableModel):
         else:
             raise ValueError("Only supports Display and Tooltip roles.")
 
-    def rowCount(self, index) -> int:
-        return len(self.repo_data_list)
-    
-    def columnCount(self, index) -> int:
+    def rowCount(self, index: QModelIndex) -> int:
+        """Part of the Qt model interface."""
+        return len(self.repo_data)
+
+    def columnCount(self, index: QModelIndex) -> int:
+        """Part of the Qt model interface."""
         return 18
 
     def row_shading(self, index: QModelIndex) -> QColor:
-        if ((self.repo_data_list[index.row()]['untracked_count'] > 0)
-                or self.repo_data_list[index.row()]['working_tree_changes']
-                or self.repo_data_list[index.row()]['index_changes']):
+        """Colour the rows of the repo list to indicate status."""
+        if ((self.repo_data[index.row()]['untracked_count'] > 0)
+                or self.repo_data[index.row()]['working_tree_changes']
+                or self.repo_data[index.row()]['index_changes']):
             return QColor("red")
-        elif (self.repo_data_list[index.row()]['behind_count'] > 0):
+        elif (self.repo_data[index.row()]['behind_count'] > 0):
             return QColor("yellow")
-        elif (self.repo_data_list[index.row()]['ahead_count'] > 0):
+        elif (self.repo_data[index.row()]['ahead_count'] > 0):
             return QColor("green")
         else:
             return QColor("white")
 
     def get_commit_html(self, index: QModelIndex) -> str:
-        commit_data = read.read_commits(self.repo_list[index.row()],
+        """Provide a formatted view of the most recent commits."""
+        commit_data = read.read_commits(self.settings.repo_list[index.row()],
                                         VIEW_COMMIT_COUNT)
         summary = "" if commit_data else "No commits"
         for c in commit_data:
@@ -177,58 +187,64 @@ class MyModel(QAbstractTableModel):
                 "</pre>"
             )
         return summary
-    
+
     def search_and_read_repos(self, root_directory: str | Path) -> None:
-        self.repo_list = search.find_git_repos(root_directory)
+        """Perform a search for repositories, then read their data/status."""
+        self.settings.set_repo_list(search.find_git_repos(root_directory))
         self.refresh_data()
 
     def refresh_data(self) -> None:
-        self.repo_data_list = []
-        for repo in self.repo_list:
-            self.repo_data_list.append(read.read_repo(repo))
+        """Re-read all listed repos and store the data."""
+        self.repo_data = []
+        for repo in self.settings.repo_list:
+            self.repo_data.append(read.read_repo(repo))
         self.layoutChanged.emit()
 
     def table_clicked(self, index: QModelIndex):
+        """Launch processes when certain columns are clicked."""
         if index.column() == OPEN_FOLDER_COLUMN:
             QDesktopServices.openUrl(
                 QUrl("file://"
-                     + str(self.repo_data_list[index.row()]['repo_dir'])))
+                     + str(self.repo_data[index.row()]['repo_dir'])))
         elif index.column() == OPEN_DIFFTOOL_COLUMN:
             git_args = None
-            if self.repo_data_list[index.row()]['working_tree_changes']:
+            if self.repo_data[index.row()]['working_tree_changes']:
                 git_args = ["difftool", "--dir-diff"]
-            elif self.repo_data_list[index.row()]['last_commit_datetime'] is not None:
+            elif (self.repo_data[index.row()]['last_commit_datetime']
+                  is not None):
                 git_args = ["difftool", "--dir-diff", "HEAD~1..HEAD"]
             if git_args is not None:
                 myProcess = QProcess()
                 myProcess.setWorkingDirectory(
-                    str(self.repo_data_list[index.row()]['repo_dir']))
+                    str(self.repo_data[index.row()]['repo_dir']))
                 myProcess.start("git", git_args)
                 myProcess.waitForFinished(-1)
         elif index.column() == OPEN_TERMINAL_COLUMN:
             myProcess = QProcess()
             myProcess.setWorkingDirectory(
-                str(self.repo_data_list[index.row()]['repo_dir']))
-            myProcess.start("gnome-terminal")
+                str(self.repo_data[index.row()]['repo_dir']))
+            myProcess.start(self.settings.terminal_command)
             myProcess.waitForFinished(-1)
         elif index.column() == OPEN_IDE_COLUMN:
             myProcess = QProcess()
             myProcess.start(
-                "code", ["-n",
-                         str(self.repo_data_list[index.row()]['repo_dir'])])
+                        self.settings.ide_command, ["-n",
+                            str(self.repo_data[index.row()]['repo_dir'])])
             myProcess.waitForFinished(-1)
 
-    def headerData(self, section, orient: Qt.Orientation, role):
+    def headerData(self, section: int, orient: Qt.Orientation,
+                   role: Qt.ItemDataRole) -> Any:
+        """Part of the Qt model interface."""
         if (role == Qt.ItemDataRole.DisplayRole and
-            orient == Qt.Orientation.Horizontal):
+                orient == Qt.Orientation.Horizontal):
             return f"H {section}"
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Main window."""
+
     def __init__(self):
         super().__init__()
-        self.search_path_str = ""
         self.setupUi(self)
         self.setWindowTitle(APP_TITLE + ":  " + APP_SUBTITLE)
         self.set_default_commit_text_format()
@@ -237,6 +253,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.connect_signals()
 
     def set_default_commit_text_format(self) -> None:
+        """Format the lower display pane appearance."""
         font = QFont()
         font.setStyleHint(QFont.StyleHint.Monospace)
         font.setFamily('monospace')
@@ -245,15 +262,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                          "background-color: black;"
                                          "color : white;}")
 
-    def selection_changed(self) -> None:
+    def repo_selection_changed(self) -> None:
+        """Run when upper pane (repo list) selection changes."""
         commit_html_text = self.model.get_commit_html(
                             self.tableView.selectionModel().currentIndex())
         self.plainTextEdit.clear()
         self.plainTextEdit.appendHtml(commit_html_text)
 
-    def connect_signals(self):
+    def connect_signals(self) -> None:
+        """Connect all signals and slots."""
         self.tableView.selectionModel().selectionChanged.connect(
-                                           self.selection_changed)
+                                           self.repo_selection_changed)
         self.tableView.clicked.connect(self.model.table_clicked)
         self.actionExit.triggered.connect(self.close)  # type: ignore
         self.actionVisit_GitHub.triggered.connect(self.visit_github)
@@ -261,33 +280,76 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionRefresh_all.triggered.connect(self.model.refresh_data)
         self.actionRefresh_all.setShortcut("F5")
         self.actionSearch_for_repositories.triggered.connect(
-            self.search_dialog)
+            self.run_search_dialog)
+        self.actionSettings.triggered.connect(self.run_settings_dialog)
 
-    def visit_github(self):
+    def visit_github(self) -> None:
         QDesktopServices.openUrl(QUrl(PROJECT_GITHUB_URL))
 
-    def help_about(self):
+    def help_about(self) -> None:
         QMessageBox.about(
             self,
             "About",
             f"<p>{APP_TITLE}</p>"
             f"<p>Version {APP_VERSION}</p>"
             f"<p>{APP_SUBTITLE.capitalize()}</p>"
-            "<p>Built with PyQt and Qt Designer</p>"
+            "<p>Made with PyQt and Qt Designer</p>"
             f"<a href='{PROJECT_GITHUB_URL}'>View the code on GitHub</a>"
         )
 
-    def search_dialog(self) -> None:
+    def run_search_dialog(self) -> None:
+        """Dialog for repository search."""
         (search_path_str, ok) = QInputDialog.getText(
             self, "Search for repositories",
             ("Choose the root directory. All directories\n"
              "below this will be searched (this may be slow)."),
-            QLineEdit.EchoMode.Normal, self.search_path_str,
+            QLineEdit.EchoMode.Normal, self.model.settings.search_path,
             Qt.WindowType.Dialog,
             Qt.InputMethodHint.ImhNone)
         if ok and Path(search_path_str).is_dir():
-            self.search_path_str = search_path_str
             self.model.search_and_read_repos(search_path_str)
+            self.model.settings.set_search_path(search_path_str)
+
+    def run_settings_dialog(self) -> None:
+        """Launch dialog to get/update/display user-selected settings."""
+        settings_ui = SettingsWindow(self.model.settings)
+        settings_ui.exec()
+        (ok, new_settings) = settings_ui.get_inputs()
+        if ok:
+            self.model.settings.set(new_settings)
+
+
+class SettingsWindow(QDialog, Ui_Dialog):
+    """Allow user to view and/or choose application settings via a GUI."""
+
+    def __init__(self, existing_settings: AppSettings) -> None:
+        """Input the existing settings to display in the dialog."""
+        super().__init__()
+        self.setupUi(self)
+        self._set_existing_settings(existing_settings)
+
+    def _set_existing_settings(self, existing_settings: AppSettings) -> None:
+        """Set existing/default app settings in user input widgets."""
+        self.checkBox_fetches.setChecked(existing_settings.fetch_remotes)
+        self.lineEdit_IDE.setText(existing_settings.ide_command)
+        self.lineEdit_terminal.setText(existing_settings.terminal_command)
+        self.label_settings_location.setText(
+            "Application settings will be saved in\n"
+            + str(existing_settings.settings_directory))
+
+    def get_inputs(self) -> tuple[bool, dict[str, str | bool]]:
+        """Get app settings from user input widgets."""
+        new_settings = {}
+        if (self.exec_ok):
+            new_settings['ide_command'] = self.lineEdit_IDE.text()
+            new_settings['terminal_command'] = self.lineEdit_terminal.text()
+            new_settings['fetch_remotes'] = self.checkBox_fetches.isChecked()
+        return (self.exec_ok, new_settings)
+
+    def exec(self) -> int:
+        """Show the dialog and wait for the user to close it."""
+        self.exec_ok = super().exec() == 1
+        return 1 if self.exec_ok else 0
 
 
 if __name__ == "__main__":
