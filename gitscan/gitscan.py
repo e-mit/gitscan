@@ -22,10 +22,12 @@ OPEN_FOLDER_COLUMN = 14
 OPEN_DIFFTOOL_COLUMN = OPEN_FOLDER_COLUMN + 1
 OPEN_TERMINAL_COLUMN = OPEN_FOLDER_COLUMN + 2
 OPEN_IDE_COLUMN = OPEN_FOLDER_COLUMN + 3
-OPEN_FOLDER_ICON = "resources/ex.svg"
-OPEN_DIFFTOOL_ICON = "resources/tick.svg"
-OPEN_TERMINAL_ICON = "resources/tick2.svg"
-OPEN_IDE_ICON = "resources/bag.svg"
+OPEN_FOLDER_ICON = "resources/folder.svg"
+OPEN_DIFFTOOL_ICON = "resources/diff.svg"
+OPEN_TERMINAL_ICON = "resources/terminal.svg"
+OPEN_IDE_ICON = "resources/window.svg"
+WARNING_ICON = "resources/warning.svg"
+REFRESH_ICON = "resources/refresh.svg"
 
 
 class MyModel(QAbstractTableModel):
