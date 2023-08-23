@@ -23,6 +23,8 @@ OPEN_FOLDER_COLUMN = 14
 OPEN_DIFFTOOL_COLUMN = OPEN_FOLDER_COLUMN + 1
 OPEN_TERMINAL_COLUMN = OPEN_FOLDER_COLUMN + 2
 OPEN_IDE_COLUMN = OPEN_FOLDER_COLUMN + 3
+REFRESH_COLUMN = OPEN_FOLDER_COLUMN + 4
+TOTAL_COLUMNS = REFRESH_COLUMN + 1
 OPEN_FOLDER_ICON = "resources/folder.svg"
 OPEN_DIFFTOOL_ICON = "resources/diff.svg"
 OPEN_TERMINAL_ICON = "resources/terminal.svg"
@@ -37,7 +39,7 @@ class MyModel(QAbstractTableModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.settings = settings.AppSettings()
-        self.refresh_data()
+        self.refresh_all_data()
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
@@ -56,6 +58,8 @@ class MyModel(QAbstractTableModel):
                 return QIcon(OPEN_TERMINAL_ICON)
             elif (index.column() == OPEN_IDE_COLUMN):
                 return QIcon(OPEN_IDE_ICON)
+            elif (index.column() == REFRESH_COLUMN):
+                return QIcon(REFRESH_ICON)
 
     def _display_data(self, index: QModelIndex,
                       role: Qt.ItemDataRole) -> str:
@@ -146,6 +150,8 @@ class MyModel(QAbstractTableModel):
             tooltip = "Open in terminal"
         elif (index.column() == OPEN_IDE_COLUMN):
             tooltip = "Open in IDE"
+        elif (index.column() == REFRESH_COLUMN):
+            tooltip = "Refresh"
         if role == Qt.ItemDataRole.DisplayRole:
             return data
         elif role == Qt.ItemDataRole.ToolTipRole:
@@ -159,7 +165,7 @@ class MyModel(QAbstractTableModel):
 
     def columnCount(self, index: QModelIndex) -> int:
         """Part of the Qt model interface."""
-        return 18
+        return TOTAL_COLUMNS
 
     def row_shading(self, index: QModelIndex) -> QColor:
         """Colour the rows of the repo list to indicate status."""
@@ -194,14 +200,22 @@ class MyModel(QAbstractTableModel):
     def search_and_read_repos(self, root_directory: str | Path) -> None:
         """Perform a search for repositories, then read their data/status."""
         self.settings.set_repo_list(search.find_git_repos(root_directory))
-        self.refresh_data()
+        self.refresh_all_data()
 
-    def refresh_data(self) -> None:
+    def refresh_all_data(self) -> None:
         """Re-read all listed repos and store the data."""
         self.repo_data = []
         for repo in self.settings.repo_list:
             self.repo_data.append(read.read_repo(repo))
         self.layoutChanged.emit()
+
+    def refresh_row(self, index: QModelIndex) -> None:
+        """Re-read one repo and update the data."""
+        self.repo_data[index.row()] = read.read_repo(
+            self.settings.repo_list[index.row()])
+        self.dataChanged.emit(self.createIndex(index.row(), 0),
+                              self.createIndex(index.row(),
+                                               TOTAL_COLUMNS - 1))
 
     def table_clicked(self, index: QModelIndex):
         """Launch processes when certain columns are clicked."""
@@ -234,6 +248,8 @@ class MyModel(QAbstractTableModel):
                         self.settings.ide_command, ["-n",
                             str(self.repo_data[index.row()]['repo_dir'])])
             myProcess.waitForFinished(-1)
+        elif index.column() == REFRESH_COLUMN:
+            self.refresh_row(index)
 
     def headerData(self, section: int, orient: Qt.Orientation,
                    role: Qt.ItemDataRole) -> Any:
@@ -265,8 +281,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                          "background-color: black;"
                                          "color : white;}")
 
-    def repo_selection_changed(self) -> None:
-        """Run when upper pane (repo list) selection changes."""
+    def display_commit_text(self) -> None:
+        """Run when selected repo, or its data, changes."""
         commit_html_text = self.model.get_commit_html(
                             self.tableView.selectionModel().currentIndex())
         self.plainTextEdit.clear()
@@ -275,16 +291,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def connect_signals(self) -> None:
         """Connect all signals and slots."""
         self.tableView.selectionModel().selectionChanged.connect(
-                                           self.repo_selection_changed)
+                                           self.display_commit_text)
         self.tableView.clicked.connect(self.model.table_clicked)
         self.actionExit.triggered.connect(self.close)  # type: ignore
         self.actionVisit_GitHub.triggered.connect(self._visit_github)
         self.actionAbout.triggered.connect(self._help_about)
-        self.actionRefresh_all.triggered.connect(self.model.refresh_data)
+        self.actionRefresh_all.triggered.connect(self.model.refresh_all_data)
         self.actionRefresh_all.setShortcut("F5")
         self.actionSearch_for_repositories.triggered.connect(
             self.run_search_dialog)
         self.actionSettings.triggered.connect(self.run_settings_dialog)
+        self.model.dataChanged.connect(self.display_commit_text)
+        self.model.layoutChanged.connect(self.display_commit_text)
 
     def _visit_github(self) -> None:
         QDesktopServices.openUrl(QUrl(PROJECT_GITHUB_URL))
