@@ -40,11 +40,11 @@ class TestFindGitRepos(unittest.TestCase):
         repo_count_range = (0, 3)
         subdir_count_range = (1, 3)
         recursion_depth_remaining = 6
-        self.actual_repo_list = create_git_directory_tree(
+        self.actual_repo_list = [str(x) for x in create_git_directory_tree(
                                     self.temp_root_dir,
                                     repo_count_range,
                                     subdir_count_range,
-                                    recursion_depth_remaining)
+                                    recursion_depth_remaining)]
 
     def test_search(self) -> None:
         list_path_to_git = search.find_git_repos(self.temp_root_dir)
