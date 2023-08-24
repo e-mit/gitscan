@@ -144,13 +144,13 @@ class MyModel(QAbstractTableModel):
                 tooltip = "Uncommitted index change(s)"
         elif (index.column() == 7):
             if self.repo_data[index.row()]['ahead_count'] > 0:
-                data = "˄"
+                data = "▲"
                 tooltip = ("Ahead of remote(s) by "
                            f"{self.repo_data[index.row()]['ahead_count']}"
                            " commits")
         elif (index.column() == 8):
             if self.repo_data[index.row()]['behind_count'] > 0:
-                data = "˅"
+                data = "▼"
                 tooltip = ("Behind remote(s) by "
                            f"{self.repo_data[index.row()]['behind_count']}"
                            " commits")
@@ -320,7 +320,7 @@ class MyModel(QAbstractTableModel):
                    role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
         col_titles = ["Parent directory", "Name", "U", "M", "B",
-                      "S", "I", "˄", "˅", "T"]
+                      "S", "I", "▲", "▼", "T"]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):
