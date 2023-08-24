@@ -321,10 +321,19 @@ class MyModel(QAbstractTableModel):
         """Part of the Qt model interface."""
         col_titles = ["Parent directory", "Name", "U", "M", "B",
                       "S", "I", "▲", "▼", "T"]
+        col_tooltips = ["Parent directory", "Repository name",
+                        "Untracked file(s)", "Modified file(s)",
+                        "Bare repository", "At least one stash",
+                        "Index has changes", "Ahead of at least one remote",
+                        "Behind at least one remote", "Tag(s)"]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):
                 return col_titles[section]
+        elif (role == Qt.ItemDataRole.ToolTipRole and
+                orient == Qt.Orientation.Horizontal):
+            if section < len(col_titles):
+                return col_tooltips[section]
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
