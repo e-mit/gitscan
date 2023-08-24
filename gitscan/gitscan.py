@@ -3,7 +3,7 @@ import sys
 from typing import Any
 from pathlib import Path
 from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
-from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog, QAbstractItemView
+from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog, QAbstractItemView, QAbstractScrollArea
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
 from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPalette
 
@@ -279,9 +279,12 @@ class MyModel(QAbstractTableModel):
     def headerData(self, section: int, orient: Qt.Orientation,
                    role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
+        col_titles = ["Parent directory", "Name", "U", "M", "B",
+                      "S", "I", "˄", "˅", "T"]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
-            return f"H {section}"
+            if section < len(col_titles):
+                return col_titles[section]
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -297,21 +300,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._format_table()
         self._connect_signals()
 
-    def _set_table_selection_style(self, colour: str) -> None:
-        self.tableView.setStyleSheet("QTableView::item:selected {"
-                                     "border-width: 4px 0 4px 0;"
-                                     "border-style: solid;"
-                                     "border-color: black;}"
-                                     "QTableView {"
-                                     "selection-color: black;"
-                                     "selection-background-color:"
-                                     f" {colour};}}")
-
     def _format_table(self) -> None:
         self.tableView.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows)
         self.tableView.setSelectionMode(
             QAbstractItemView.SelectionMode.SingleSelection)
+        self.tableView.setSizeAdjustPolicy(
+            QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.tableView.horizontalHeader().setMinimumSectionSize(0)
+        self._update_view()
 
     def _set_default_commit_text_format(self) -> None:
         """Format the lower display pane appearance."""
@@ -323,18 +320,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                          "background-color: black;"
                                          "color : white;}")
 
+    def _update_view(self):
+        self._row_selection_shading()
+        self._display_commit_text()
+        self.tableView.resizeColumnsToContents()
+
+    def _row_selection_shading(self):
+        """Change selection colour when selection changes."""
+        index = self.tableView.selectionModel().currentIndex()
+        self.tableView.setStyleSheet("QTableView::item:selected {"
+                                     "border-width: 4px 0 4px 0;"
+                                     "border-style: solid;"
+                                     "border-color: black;}"
+                                     "QTableView {"
+                                     "selection-color: black;"
+                                     "selection-background-color:"
+                                     f" {self.model.row_shading(index)};}}")
+
     def _display_commit_text(self) -> None:
-        """Run when selected repo, or its data, changes."""
+        """Get and display the commit text in lower pane."""
         index = self.tableView.selectionModel().currentIndex()
         commit_html_text = self.model.get_commit_html(index)
         self.plainTextEdit.clear()
         self.plainTextEdit.appendHtml(commit_html_text)
-        self._set_table_selection_style(self.model.row_shading(index))
 
     def _connect_signals(self) -> None:
         """Connect all signals and slots."""
         self.tableView.selectionModel().selectionChanged.connect(
-                                           self._display_commit_text)
+            self._update_view)
         self.tableView.clicked.connect(self.model.table_clicked)
         self.actionExit.triggered.connect(self.close)  # type: ignore
         self.actionVisit_GitHub.triggered.connect(self._visit_github)
@@ -344,8 +357,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionSearch_for_repositories.triggered.connect(
             self._run_search_dialog)
         self.actionSettings.triggered.connect(self._run_settings_dialog)
-        self.model.dataChanged.connect(self._display_commit_text)
-        self.model.layoutChanged.connect(self._display_commit_text)
+        self.model.dataChanged.connect(self._update_view)
+        self.model.layoutChanged.connect(self._update_view)
 
     def _visit_github(self) -> None:
         QDesktopServices.openUrl(QUrl(PROJECT_GITHUB_URL))
