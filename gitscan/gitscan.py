@@ -3,9 +3,11 @@ import sys
 from typing import Any
 from pathlib import Path
 from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
-from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog, QAbstractItemView, QAbstractScrollArea
+from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
+from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
+from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
-from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPalette
+from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPainter, QPen
 
 import arrow
 
@@ -34,6 +36,54 @@ WARNING_ICON = "resources/warning.svg"
 REFRESH_ICON = "resources/refresh.svg"
 UNFETCHED_REMOTE_WARNING = "Remote not fetched"
 FETCH_FAILED_WARNING = "Fetch failed"
+ICON_SCALE_FACTOR = 0.7
+ROW_SCALE_FACTOR = 1.5
+COLUMN_SCALE_FACTOR = 1.2
+
+
+class StyleDelegate(QStyledItemDelegate):
+    """Custom delegate to insert icons with H and V centering."""
+
+    def __init__(self, model, *args, **kwargs):
+        self.model = model
+        super().__init__(*args, **kwargs)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem,
+              index: QModelIndex) -> None:
+        super().paint(painter, option, index)
+        icon = None
+        if (index.column() == OPEN_FOLDER_COLUMN):
+            icon = QIcon(OPEN_FOLDER_ICON)
+        elif (index.column() == OPEN_DIFFTOOL_COLUMN):
+            if ((not self.model.repo_data[index.row()]['bare']) and
+                (self.model.repo_data[index.row()]['working_tree_changes'] or
+                 self.model.repo_data[index.row()]['commit_count'] > 1)):
+                icon = QIcon(OPEN_DIFFTOOL_ICON)
+        elif (index.column() == OPEN_TERMINAL_COLUMN):
+            icon = QIcon(OPEN_TERMINAL_ICON)
+        elif (index.column() == OPEN_IDE_COLUMN):
+            icon = QIcon(OPEN_IDE_ICON)
+        elif (index.column() == REFRESH_COLUMN):
+            icon = QIcon(REFRESH_ICON)
+        elif (index.column() == WARNING_COLUMN):
+            if 'warning' in self.model.repo_data[index.row()]:
+                icon = QIcon(WARNING_ICON)
+
+        if icon is not None:
+            size = option.rect.size()
+            size.setHeight(int(size.height()*ICON_SCALE_FACTOR))
+            size.setWidth(int(size.width()*ICON_SCALE_FACTOR))
+            option.widget.style(
+                ).drawItemPixmap(painter, option.rect,
+                                Qt.AlignmentFlag.AlignCenter,
+                                icon.pixmap(size))
+
+        oldPen = painter.pen()
+        painter.setPen(QPen(QColor(200, 200, 200, 100), 1))
+        painter.drawLine(option.rect.topRight(), option.rect.bottomRight())
+        painter.drawLine(option.rect.topLeft(), option.rect.bottomLeft())
+        painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
+        painter.setPen(oldPen)
 
 
 class MyModel(QAbstractTableModel):
@@ -52,23 +102,12 @@ class MyModel(QAbstractTableModel):
             return self._display_data(index, Qt.ItemDataRole.ToolTipRole)
         elif role == Qt.ItemDataRole.BackgroundRole:
             return QColor(self.row_shading(index))
-        elif role == Qt.ItemDataRole.DecorationRole:
-            if (index.column() == OPEN_FOLDER_COLUMN):
-                return QIcon(OPEN_FOLDER_ICON)
-            elif (index.column() == OPEN_DIFFTOOL_COLUMN):
-                if ((not self.repo_data[index.row()]['bare']) and
-                        (self.repo_data[index.row()]['working_tree_changes'] or
-                         self.repo_data[index.row()]['commit_count'] > 1)):
-                    return QIcon(OPEN_DIFFTOOL_ICON)
-            elif (index.column() == OPEN_TERMINAL_COLUMN):
-                return QIcon(OPEN_TERMINAL_ICON)
-            elif (index.column() == OPEN_IDE_COLUMN):
-                return QIcon(OPEN_IDE_ICON)
-            elif (index.column() == REFRESH_COLUMN):
-                return QIcon(REFRESH_ICON)
-            elif (index.column() == WARNING_COLUMN):
-                if 'warning' in self.repo_data[index.row()]:
-                    return QIcon(WARNING_ICON)
+        elif (role == Qt.ItemDataRole.TextAlignmentRole and
+              ((index.column() >= OPEN_FOLDER_COLUMN and
+                index.column() <= WARNING_COLUMN) or
+               (index.column() >= 2 and
+                index.column() <= 9))):
+            return Qt.AlignmentFlag.AlignCenter
 
     def _display_data(self, index: QModelIndex,
                       role: Qt.ItemDataRole) -> str:
@@ -76,7 +115,7 @@ class MyModel(QAbstractTableModel):
         tooltip = ""
         if (index.column() == 0):
             data = str(self.repo_data[index.row()]['containing_dir'])
-            tooltip = "Containing directory"
+            tooltip = "Parent directory"
         elif (index.column() == 1):
             data = self.repo_data[index.row()]['name']
             tooltip = "Repository name"
@@ -297,6 +336,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._set_default_commit_text_format()
         self.model = MyModel()
         self.tableView.setModel(self.model)
+        self.tableView.setItemDelegate(StyleDelegate(self.model, self.tableView))
+        self.tableView.setShowGrid(False)
         self._format_table()
         self._connect_signals()
 
@@ -307,8 +348,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QAbstractItemView.SelectionMode.SingleSelection)
         self.tableView.setSizeAdjustPolicy(
             QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
-        self.tableView.horizontalHeader().setMinimumSectionSize(0)
+        self._resize_rows_columns()
         self._update_view()
+        
+    def _resize_rows_columns(self):
+        self.tableView.verticalHeader().setMinimumSectionSize(0)
+        self.tableView.resizeRowsToContents()
+        v_size = self.tableView.verticalHeader().sectionSize(0)
+        self.tableView.verticalHeader().setMinimumSectionSize(int(v_size*ROW_SCALE_FACTOR))
+        # Horizontal:
+        self.tableView.horizontalHeader().setMinimumSectionSize(0)
+        self.tableView.resizeColumnsToContents()
+        for col in range(self.model.columnCount(None)):
+            self.tableView.horizontalHeader().resizeSection(
+                col,
+                int(self.tableView.horizontalHeader().sectionSize(col)*COLUMN_SCALE_FACTOR))
+        self.tableView.horizontalHeader().setMinimumSectionSize(
+            self.tableView.horizontalHeader().sectionSize(3))
 
     def _set_default_commit_text_format(self) -> None:
         """Format the lower display pane appearance."""
@@ -323,7 +379,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _update_view(self):
         self._row_selection_shading()
         self._display_commit_text()
-        self.tableView.resizeColumnsToContents()
+        self._resize_rows_columns()
 
     def _row_selection_shading(self):
         """Change selection colour when selection changes."""
