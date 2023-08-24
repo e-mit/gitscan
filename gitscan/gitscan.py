@@ -7,7 +7,8 @@ from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
 from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
-from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPainter, QPen
+from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPainter
+from PyQt6.QtGui import QPen, QTextCursor
 
 import arrow
 
@@ -350,6 +351,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self._resize_rows_columns()
         self._update_view()
+        self.splitter.setSizes([150, 100])
         
     def _resize_rows_columns(self):
         self.tableView.verticalHeader().setMinimumSectionSize(0)
@@ -399,6 +401,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         commit_html_text = self.model.get_commit_html(index)
         self.plainTextEdit.clear()
         self.plainTextEdit.appendHtml(commit_html_text)
+        self.plainTextEdit.moveCursor(QTextCursor.MoveOperation.Start)
+        self.plainTextEdit.ensureCursorVisible()
 
     def _connect_signals(self) -> None:
         """Connect all signals and slots."""
