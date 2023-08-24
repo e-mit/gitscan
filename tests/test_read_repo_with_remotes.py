@@ -70,10 +70,12 @@ class TestReadRepoWithManyRemotes(TestReadRepoWithRemotes):
     index_changes = True
     tag_count = 2
     stash = True
+    less_than_2_commits = False
 
 
 class TestReadRepoAheadOfRemotes(TestReadRepoWithRemotes):
     ahead_count = 3
+    less_than_2_commits = False
 
 
 class TestReadRepoBehindRemotes(TestReadRepoWithRemotes):
@@ -89,6 +91,7 @@ class TestReadRepoAheadAndBehindRemotes(TestReadRepoWithRemotes):
     ahead_count = 2
     remote_count = 4
     behind_each_remote_count = [1, 3, 1, 0]
+    less_than_2_commits = False
 
 
 class TestReadRepoFailFetch(TestReadRepoWithRemotes):
@@ -101,6 +104,7 @@ class TestReadRepoFailFetch(TestReadRepoWithRemotes):
                                 "https://example.com/fake-repo")
         self.expected_info['fetch_failed'] = True
         self.expected_info['remote_count'] = self.remote_count + 1
+        self.less_than_2_commits = False
 
 
 class TestReadRepoCloneOfEmpty(TestReadRepoWithRemotes):
@@ -119,6 +123,7 @@ class TestReadRepoCloneOfEmptyWithCommits(TestReadRepoWithRemotes):
         self.expected_info['fetch_failed'] = True
         self.expected_info['branch_name'] = "master"  # the default
         self.expected_info['ahead_count'] = 0
+        self.less_than_2_commits = False
 
 
 class TestReadRepoCloneOfDetachedHead(TestReadRepoWithRemotes):

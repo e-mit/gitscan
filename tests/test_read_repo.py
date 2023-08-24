@@ -24,6 +24,7 @@ class TestReadRepo(unittest.TestCase):
     index_changes = False
     working_tree_changes = False
     detached_head = False
+    less_than_2_commits = True
 
     def calculate_expected_commits(self):
         if self.commit_count == 0:
@@ -96,6 +97,9 @@ class TestReadRepo(unittest.TestCase):
                 self.assertTrue((datetime.now(ZoneInfo('UTC')) -
                                 last_commit_datetime).total_seconds()
                                 < MAX_EXPECTED_TEST_COMMIT_AGE_S)
+        commit_count = info.pop('commit_count')
+        with self.subTest(key='commit_count'):
+            self.assertEqual(commit_count < 2, self.less_than_2_commits)
         with self.subTest(key='key_sets'):
             self.assertEqual(set(info.keys()), set(self.expected_info.keys()))
         for k in self.expected_info:
@@ -127,6 +131,7 @@ class TestReadRepoTags(TestReadRepo):
 class TestReadRepoActiveBranch(TestReadRepo):
     extra_branches = ['dev', 'test']
     active_branch = 'dev'
+    less_than_2_commits = False
 
 
 class TestReadRepoUntracked(TestReadRepo):
@@ -150,6 +155,7 @@ class TestReadRepoUntrackedModified(TestReadRepo):
     active_branch = 'dev'
     working_tree_changes = True
     untracked_count = 4
+    less_than_2_commits = False
 
 
 class TestReadRepoUntrackedIndex(TestReadRepo):

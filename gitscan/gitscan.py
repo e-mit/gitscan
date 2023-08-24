@@ -56,7 +56,10 @@ class MyModel(QAbstractTableModel):
             if (index.column() == OPEN_FOLDER_COLUMN):
                 return QIcon(OPEN_FOLDER_ICON)
             elif (index.column() == OPEN_DIFFTOOL_COLUMN):
-                return QIcon(OPEN_DIFFTOOL_ICON)
+                if ((not self.repo_data[index.row()]['bare']) and
+                        (self.repo_data[index.row()]['working_tree_changes'] or
+                         self.repo_data[index.row()]['commit_count'] > 1)):
+                    return QIcon(OPEN_DIFFTOOL_ICON)
             elif (index.column() == OPEN_TERMINAL_COLUMN):
                 return QIcon(OPEN_TERMINAL_ICON)
             elif (index.column() == OPEN_IDE_COLUMN):
@@ -151,7 +154,10 @@ class MyModel(QAbstractTableModel):
         elif (index.column() == OPEN_FOLDER_COLUMN):
             tooltip = "Open directory"
         elif (index.column() == OPEN_DIFFTOOL_COLUMN):
-            tooltip = "Open in difftool"
+            if ((not self.repo_data[index.row()]['bare']) and
+                    (self.repo_data[index.row()]['working_tree_changes'] or
+                        self.repo_data[index.row()]['commit_count'] > 1)):
+                tooltip = "Open in difftool"
         elif (index.column() == OPEN_TERMINAL_COLUMN):
             tooltip = "Open in terminal"
         elif (index.column() == OPEN_IDE_COLUMN):
@@ -243,10 +249,11 @@ class MyModel(QAbstractTableModel):
                      + str(self.repo_data[index.row()]['repo_dir'])))
         elif index.column() == OPEN_DIFFTOOL_COLUMN:
             git_args = None
-            if self.repo_data[index.row()]['working_tree_changes']:
+            if self.repo_data[index.row()]['bare']:
+                pass  # TODO: diff using last 2 commit hashes
+            elif self.repo_data[index.row()]['working_tree_changes']:
                 git_args = ["difftool", "--dir-diff"]
-            elif (self.repo_data[index.row()]['last_commit_datetime']
-                  is not None):
+            elif (self.repo_data[index.row()]['commit_count'] > 1):
                 git_args = ["difftool", "--dir-diff", "HEAD~1..HEAD"]
             if git_args is not None:
                 myProcess = QProcess()

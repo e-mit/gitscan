@@ -51,6 +51,13 @@ def read_repo(path_to_git: str | Path,
                                                  working_tree=True,
                                                  untracked_files=False,
                                                  submodules=False)
+
+    try:
+        info['commit_count'] = sum(1 for _ in repo.iter_commits())
+    except ValueError:
+        # occurs with no commits
+        info['commit_count'] = 0
+
     if not repo.bare:
         info['untracked_count'] = len(repo.untracked_files)
         info['stash'] = len(repo.git.stash("list")) > 0

@@ -52,6 +52,7 @@ class TestReadBareRepoTags(TestReadBareRepo):
 class TestReadBareRepoActiveBranch(TestReadBareRepo):
     extra_branches = ['dev', 'test']
     active_branch = 'dev'
+    less_than_2_commits = False
 
 
 class TestReadBareRepoUntracked(TestReadBareRepo):
@@ -75,6 +76,7 @@ class TestReadBareRepoUntrackedModified(TestReadBareRepo):
     active_branch = 'dev'
     working_tree_changes = True
     untracked_count = 4
+    less_than_2_commits = False
 
 
 class TestReadBareRepoUntrackedIndex(TestReadBareRepo):
