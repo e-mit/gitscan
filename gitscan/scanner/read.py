@@ -28,7 +28,8 @@ def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path, Path]:
     return (repo_name, repo_dir, containing_dir)
 
 
-def read_repo(path_to_git: str | Path) -> dict[str, Any]:
+def read_repo(path_to_git: str | Path,
+              fetch_remotes: bool = True) -> dict[str, Any]:
     """Extract basic information about the repo.
 
     see extract_repo_name() for path_to_git definition.
@@ -76,7 +77,7 @@ def read_repo(path_to_git: str | Path) -> dict[str, Any]:
     remote_commits: set[str] = set()
     ahead_counts: list[int] = []
     info['fetch_failed'] = False
-    if not repo.bare and info['branch_count']:
+    if not repo.bare and info['branch_count'] and fetch_remotes:
         for remote in repo.remotes:
             try:
                 repo.git.fetch(remote.name)

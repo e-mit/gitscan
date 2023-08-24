@@ -24,13 +24,16 @@ OPEN_DIFFTOOL_COLUMN = OPEN_FOLDER_COLUMN + 1
 OPEN_TERMINAL_COLUMN = OPEN_FOLDER_COLUMN + 2
 OPEN_IDE_COLUMN = OPEN_FOLDER_COLUMN + 3
 REFRESH_COLUMN = OPEN_FOLDER_COLUMN + 4
-TOTAL_COLUMNS = REFRESH_COLUMN + 1
+WARNING_COLUMN = OPEN_FOLDER_COLUMN + 5
+TOTAL_COLUMNS = WARNING_COLUMN + 1
 OPEN_FOLDER_ICON = "resources/folder.svg"
 OPEN_DIFFTOOL_ICON = "resources/diff.svg"
 OPEN_TERMINAL_ICON = "resources/terminal.svg"
 OPEN_IDE_ICON = "resources/window.svg"
 WARNING_ICON = "resources/warning.svg"
 REFRESH_ICON = "resources/refresh.svg"
+UNFETCHED_REMOTE_WARNING = "Remote not fetched"
+FETCH_FAILED_WARNING = "Fetch failed"
 
 
 class MyModel(QAbstractTableModel):
@@ -60,6 +63,9 @@ class MyModel(QAbstractTableModel):
                 return QIcon(OPEN_IDE_ICON)
             elif (index.column() == REFRESH_COLUMN):
                 return QIcon(REFRESH_ICON)
+            elif (index.column() == WARNING_COLUMN):
+                if 'warning' in self.repo_data[index.row()]:
+                    return QIcon(WARNING_ICON)
 
     def _display_data(self, index: QModelIndex,
                       role: Qt.ItemDataRole) -> str:
@@ -143,7 +149,7 @@ class MyModel(QAbstractTableModel):
                 data = arrow.get(last_commit_datetime).humanize().capitalize()
             tooltip = "Last commit on active branch"
         elif (index.column() == OPEN_FOLDER_COLUMN):
-            tooltip = "Open in directory explorer"
+            tooltip = "Open directory"
         elif (index.column() == OPEN_DIFFTOOL_COLUMN):
             tooltip = "Open in difftool"
         elif (index.column() == OPEN_TERMINAL_COLUMN):
@@ -152,6 +158,11 @@ class MyModel(QAbstractTableModel):
             tooltip = "Open in IDE"
         elif (index.column() == REFRESH_COLUMN):
             tooltip = "Refresh"
+        elif (index.column() == WARNING_COLUMN):
+            if 'warning' in self.repo_data[index.row()]:
+                tooltip = self.repo_data[index.row()]['warning']
+            else:
+                tooltip = ""
         if role == Qt.ItemDataRole.DisplayRole:
             return data
         elif role == Qt.ItemDataRole.ToolTipRole:
@@ -202,16 +213,23 @@ class MyModel(QAbstractTableModel):
         self.settings.set_repo_list(search.find_git_repos(root_directory))
         self.refresh_all_data()
 
+    def _read_repo(self, repo_path: str) -> dict[str, Any]:
+        data = read.read_repo(repo_path, self.settings.fetch_remotes)
+        if (not self.settings.fetch_remotes and data['remote_count'] > 0):
+            data['warning'] = UNFETCHED_REMOTE_WARNING
+        elif data['fetch_failed']:
+            data['warning'] = FETCH_FAILED_WARNING
+        return data
+
     def refresh_all_data(self) -> None:
         """Re-read all listed repos and store the data."""
-        self.repo_data = []
-        for repo in self.settings.repo_list:
-            self.repo_data.append(read.read_repo(repo))
+        self.repo_data = [self._read_repo(repo)
+                          for repo in self.settings.repo_list]
         self.layoutChanged.emit()
 
     def refresh_row(self, index: QModelIndex) -> None:
         """Re-read one repo and update the data."""
-        self.repo_data[index.row()] = read.read_repo(
+        self.repo_data[index.row()] = self._read_repo(
             self.settings.repo_list[index.row()])
         self.dataChanged.emit(self.createIndex(index.row(), 0),
                               self.createIndex(index.row(),
