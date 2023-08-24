@@ -138,7 +138,7 @@ class AppSettings:
 
     def _create_default_settings(self) -> None:
         self.exclude_dirs: list[str] = []
-        self.ide_command = "code"
+        self.ide_command = ["code", "-n"]
         self.search_path = ""
         self.fetch_remotes = True
         if get_platform() == Platform.LINUX:

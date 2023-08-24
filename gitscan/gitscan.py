@@ -262,9 +262,9 @@ class MyModel(QAbstractTableModel):
             myProcess.waitForFinished(-1)
         elif index.column() == OPEN_IDE_COLUMN:
             myProcess = QProcess()
-            myProcess.start(
-                        self.settings.ide_command, ["-n",
-                            str(self.repo_data[index.row()]['repo_dir'])])
+            ide_args = self.settings.ide_command[1:]
+            ide_args.append(str(self.repo_data[index.row()]['repo_dir']))
+            myProcess.start(self.settings.ide_command[0], ide_args)
             myProcess.waitForFinished(-1)
         elif index.column() == REFRESH_COLUMN:
             self.refresh_row(index)
@@ -388,7 +388,7 @@ class SettingsWindow(QDialog, Ui_Dialog):
     def _set_existing_settings(self, existing_settings: AppSettings) -> None:
         """Set existing/default app settings in user input widgets."""
         self.checkBox_fetches.setChecked(existing_settings.fetch_remotes)
-        self.lineEdit_IDE.setText(existing_settings.ide_command)
+        self.lineEdit_IDE.setText(" ".join(existing_settings.ide_command))
         self.lineEdit_terminal.setText(existing_settings.terminal_command)
         self.label_settings_location.setText(
             "Application settings will be saved in\n"
@@ -398,7 +398,7 @@ class SettingsWindow(QDialog, Ui_Dialog):
         """Get app settings from user input widgets."""
         new_settings = {}
         if (self.exec_ok):
-            new_settings['ide_command'] = self.lineEdit_IDE.text()
+            new_settings['ide_command'] = self.lineEdit_IDE.text().strip().split(" ")
             new_settings['terminal_command'] = self.lineEdit_terminal.text()
             new_settings['fetch_remotes'] = self.checkBox_fetches.isChecked()
         return (self.exec_ok, new_settings)
