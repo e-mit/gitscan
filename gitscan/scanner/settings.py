@@ -112,11 +112,20 @@ class AppSettings:
         self._create_default_settings()
         (preferences,
          list_path_to_git) = load_settings(self.settings_directory)
-        self.repo_list = [] if list_path_to_git is None else list_path_to_git
-        self._validate_and_set(preferences)
+        self._validate_and_set_paths(list_path_to_git)
+        self._validate_and_set_preferences(preferences)
 
-    def _validate_and_set(self,
-                          preferences: dict[str, str | bool] | None) -> bool:
+    def _validate_and_set_paths(self,
+                                list_path_to_git: list[str] | None) -> None:
+        if list_path_to_git is None:
+            self.repo_list = []
+            return
+        self.repo_list = [p for p in list_path_to_git if Path(p).is_dir()]
+        if len(self.repo_list) != len(list_path_to_git):
+            self._save_repo_list()
+
+    def _validate_and_set_preferences(self,
+                            preferences: dict[str, str | bool] | None) -> bool:
         """Check for, and apply, the expected preferences."""
         if preferences is None:
             return False
@@ -156,7 +165,7 @@ class AppSettings:
 
     def set(self, new_preferences: dict[str, str | bool]) -> None:
         """Check, then apply and save, new preferences."""
-        if self._validate_and_set(new_preferences):
+        if self._validate_and_set_preferences(new_preferences):
             self._save_preferences()
 
     def set_repo_list(self, repo_list: list[str]) -> None:
