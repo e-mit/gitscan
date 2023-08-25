@@ -110,6 +110,13 @@ class MyModel(QAbstractTableModel):
                 index.column() <= 9))):
             return Qt.AlignmentFlag.AlignCenter
 
+    @staticmethod
+    def _add_s_if_plural(count: int) -> str:
+        if count == 1:
+            return ""
+        else:
+            return "s"
+
     def _display_data(self, index: QModelIndex,
                       role: Qt.ItemDataRole) -> str:
         data = " "
@@ -124,8 +131,8 @@ class MyModel(QAbstractTableModel):
             untracked_count = self.repo_data[index.row()]['untracked_count']
             if untracked_count > 0:
                 data = "U"
-                tooltip = str(untracked_count) + " untracked "
-                tooltip += "file" if (untracked_count == 1) else "files"
+                tooltip = (str(untracked_count) + " untracked file"
+                           + self._add_s_if_plural(untracked_count))
         elif (index.column() == 3):
             if self.repo_data[index.row()]['working_tree_changes']:
                 data = "M"
@@ -143,27 +150,27 @@ class MyModel(QAbstractTableModel):
                 data = "I"
                 tooltip = "Uncommitted index change(s)"
         elif (index.column() == 7):
-            if self.repo_data[index.row()]['ahead_count'] > 0:
+            count = self.repo_data[index.row()]['ahead_count']
+            if count > 0:
                 data = "▲"
                 tooltip = ("Ahead of remote(s) by "
-                           f"{self.repo_data[index.row()]['ahead_count']}"
-                           " commits")
+                           f"{count} commit" + self._add_s_if_plural(count))
         elif (index.column() == 8):
-            if self.repo_data[index.row()]['behind_count'] > 0:
+            count = self.repo_data[index.row()]['behind_count']
+            if count > 0:
                 data = "▼"
                 tooltip = ("Behind remote(s) by "
-                           f"{self.repo_data[index.row()]['behind_count']}"
-                           " commits")
+                           f"{count} commit" + self._add_s_if_plural(count))
         elif (index.column() == 9):
             tag_count = self.repo_data[index.row()]['tag_count']
             if tag_count > 0:
                 data = "T"
-                tooltip = str(tag_count)
-                tooltip += " tag" if (tag_count == 1) else " tags"
+                tooltip = (str(tag_count) + " tag"
+                           + self._add_s_if_plural(tag_count))
         elif (index.column() == 10):
             remote_count = self.repo_data[index.row()]['remote_count']
-            data = str(remote_count)
-            data += " remote" if (remote_count == 1) else " remotes"
+            data = (str(remote_count) + " remote"
+                    + self._add_s_if_plural(remote_count))
             if remote_count == 0:
                 tooltip = "No remotes"
             else:
@@ -233,7 +240,7 @@ class MyModel(QAbstractTableModel):
         elif (self.repo_data[index.row()]['behind_count'] > 0):
             return "yellow"
         elif (self.repo_data[index.row()]['ahead_count'] > 0):
-            return "green"
+            return "cyan"
         else:
             return "white"
 
@@ -324,7 +331,7 @@ class MyModel(QAbstractTableModel):
         col_tooltips = ["Parent directory", "Repository name",
                         "Untracked file(s)", "Modified file(s)",
                         "Bare repository", "At least one stash",
-                        "Index has changes", "Ahead of at least one remote",
+                        "Index has changes", "Ahead of all remotes",
                         "Behind at least one remote", "Tag(s)"]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
