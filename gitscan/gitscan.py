@@ -92,6 +92,9 @@ class MyModel(QAbstractTableModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.repo_data = []
+
+    def load_and_refresh_saved_data(self):
         self.settings = settings.AppSettings()
         self.refresh_all_data()
 
@@ -116,6 +119,14 @@ class MyModel(QAbstractTableModel):
             return ""
         else:
             return "s"
+
+    def valid_index(self, index: QModelIndex) -> bool:
+        """Determine if index is out of table range."""
+        if index.row() < 0 or index.row() >= self.rowCount(None):
+            return False
+        if index.column() < 0 or index.column() >= self.columnCount(None):
+            return False
+        return True
 
     def _display_data(self, index: QModelIndex,
                       role: Qt.ItemDataRole) -> str:
@@ -233,6 +244,8 @@ class MyModel(QAbstractTableModel):
 
     def row_shading(self, index: QModelIndex) -> str:
         """Get row colour for the repo list to indicate status."""
+        if not self.valid_index(index):
+            return ""
         if ((self.repo_data[index.row()]['untracked_count'] > 0)
                 or self.repo_data[index.row()]['working_tree_changes']
                 or self.repo_data[index.row()]['index_changes']):
@@ -246,6 +259,8 @@ class MyModel(QAbstractTableModel):
 
     def get_commit_html(self, index: QModelIndex) -> str:
         """Provide a formatted view of the most recent commits."""
+        if not self.valid_index(index):
+            return ""
         commit_data = read.read_commits(self.settings.repo_list[index.row()],
                                         VIEW_COMMIT_COUNT)
         summary = "" if commit_data else "No commits"
@@ -353,34 +368,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._set_default_commit_text_format()
         self.model = MyModel()
         self.tableView.setModel(self.model)
-        self.tableView.setItemDelegate(StyleDelegate(self.model, self.tableView))
-        self.tableView.setShowGrid(False)
-        self._format_table()
         self._connect_signals()
+        self.tableView.setItemDelegate(StyleDelegate(self.model,
+                                                     self.tableView))
+        self.model.load_and_refresh_saved_data()
+        self._format_table()
 
     def _format_table(self) -> None:
+        self.tableView.setShowGrid(False)
         self.tableView.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows)
         self.tableView.setSelectionMode(
             QAbstractItemView.SelectionMode.SingleSelection)
         self.tableView.setSizeAdjustPolicy(
             QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
-        self._resize_rows_columns()
-        self._update_view()
         self.splitter.setSizes([150, 100])
+        self._update_view()
         
     def _resize_rows_columns(self):
         self.tableView.verticalHeader().setMinimumSectionSize(0)
         self.tableView.resizeRowsToContents()
         v_size = self.tableView.verticalHeader().sectionSize(0)
-        self.tableView.verticalHeader().setMinimumSectionSize(int(v_size*ROW_SCALE_FACTOR))
+        self.tableView.verticalHeader().setMinimumSectionSize(
+            int(v_size * ROW_SCALE_FACTOR))
         # Horizontal:
         self.tableView.horizontalHeader().setMinimumSectionSize(0)
         self.tableView.resizeColumnsToContents()
         for col in range(self.model.columnCount(None)):
             self.tableView.horizontalHeader().resizeSection(
                 col,
-                int(self.tableView.horizontalHeader().sectionSize(col)*COLUMN_SCALE_FACTOR))
+                int(self.tableView.horizontalHeader().sectionSize(col)
+                    * COLUMN_SCALE_FACTOR))
         self.tableView.horizontalHeader().setMinimumSectionSize(
             self.tableView.horizontalHeader().sectionSize(3))
 
@@ -395,6 +413,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                          "color : white;}")
 
     def _update_view(self):
+        self._resize_rows_columns()
         self._row_selection_shading()
         self._display_commit_text()
         self._resize_rows_columns()
