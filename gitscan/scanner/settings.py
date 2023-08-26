@@ -146,7 +146,7 @@ class AppSettings:
         save_repo_list(self.settings_directory, self.repo_list)
 
     def _create_default_settings(self) -> None:
-        self.exclude_dirs: list[str] = []
+        self.exclude_dirs: list[Path] = []
         self.ide_command = ["code", "-n"]
         self.search_path = ""
         self.fetch_remotes = True
@@ -154,7 +154,7 @@ class AppSettings:
             self.terminal_command = "gnome-terminal"
             trash_path = Path(os.environ['HOME']) / '.local/share/Trash'
             if trash_path.is_dir():
-                self.exclude_dirs = [str(trash_path)]
+                self.exclude_dirs = [trash_path]
         else:  # Windows
             self.terminal_command = "cmd.exe"
 

@@ -278,7 +278,9 @@ class MyModel(QAbstractTableModel):
 
     def search_and_read_repos(self, root_directory: str | Path) -> None:
         """Perform a search for repositories, then read their data/status."""
-        self.settings.set_repo_list(search.find_git_repos(root_directory))
+        self.settings.set_repo_list(
+            search.find_git_repos(root_directory,
+                                  self.settings.exclude_dirs))
         self.refresh_all_data()
 
     def _read_repo(self, repo_path: str) -> dict[str, Any]:
