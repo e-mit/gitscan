@@ -38,7 +38,7 @@ OPEN_TERMINAL_ICON = "resources/terminal.svg"
 OPEN_IDE_ICON = "resources/window.svg"
 WARNING_ICON = "resources/warning.svg"
 REFRESH_ICON = "resources/refresh.svg"
-UNFETCHED_REMOTE_WARNING = "Remote not fetched"
+UNFETCHED_REMOTE_WARNING = "Remotes not fetched"
 FETCH_FAILED_WARNING = "Fetch failed"
 ICON_SCALE_FACTOR = 0.7
 ROW_SCALE_FACTOR = 1.5
@@ -295,11 +295,13 @@ class MyModel(QAbstractTableModel):
 
     def refresh_row(self, index: QModelIndex) -> None:
         """Re-read one repo and update the data."""
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         self.repo_data[index.row()] = self._read_repo(
             self.settings.repo_list[index.row()])
         self.dataChanged.emit(self.createIndex(index.row(), 0),
                               self.createIndex(index.row(),
                                                TOTAL_COLUMNS - 1))
+        QApplication.restoreOverrideCursor()
 
     def table_clicked(self, index: QModelIndex):
         """Launch processes when certain columns are clicked."""
