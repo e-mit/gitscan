@@ -42,7 +42,7 @@ UNFETCHED_REMOTE_WARNING = "Remotes not fetched"
 FETCH_FAILED_WARNING = "Fetch failed"
 ICON_SCALE_FACTOR = 0.7
 ROW_SCALE_FACTOR = 1.5
-COLUMN_SCALE_FACTOR = 1.2
+COLUMN_SCALE_FACTOR = 1.1
 
 
 class StyleDelegate(QStyledItemDelegate):
@@ -79,8 +79,8 @@ class StyleDelegate(QStyledItemDelegate):
             size.setWidth(int(size.width()*ICON_SCALE_FACTOR))
             option.widget.style(
                 ).drawItemPixmap(painter, option.rect,
-                                Qt.AlignmentFlag.AlignCenter,
-                                icon.pixmap(size))
+                                 Qt.AlignmentFlag.AlignCenter,
+                                 icon.pixmap(size))
 
         oldPen = painter.pen()
         painter.setPen(QPen(QColor(200, 200, 200, 100), 1))
@@ -90,8 +90,8 @@ class StyleDelegate(QStyledItemDelegate):
         painter.setPen(oldPen)
 
 
-class MyModel(QAbstractTableModel):
-    """Model part of Qt model-view, for containing data."""
+class TableModel(QAbstractTableModel):
+    """The model part of Qt model-view, for containing data."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -385,7 +385,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.setWindowTitle(APP_TITLE + ":  " + APP_SUBTITLE)
         self._set_default_commit_text_format()
-        self.model = MyModel()
+        self.model = TableModel()
         self.tableView.setModel(self.model)
         self._connect_signals()
         self.tableView.setItemDelegate(StyleDelegate(self.model,
@@ -437,6 +437,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._display_commit_text()
         self._resize_rows_columns()
 
+    def _update_selection(self):
+        self._row_selection_shading()
+        self._display_commit_text()
+
     def _row_selection_shading(self):
         """Change selection colour when selection changes."""
         index = self.tableView.selectionModel().currentIndex()
@@ -461,7 +465,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _connect_signals(self) -> None:
         """Connect all signals and slots."""
         self.tableView.selectionModel().selectionChanged.connect(
-            self._update_view)
+            self._update_selection)
         self.tableView.clicked.connect(self.model.table_clicked)
         self.actionExit.triggered.connect(self.close)  # type: ignore
         self.actionVisit_GitHub.triggered.connect(self._visit_github)
@@ -538,6 +542,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         (ok, new_settings) = settings_ui.get_inputs()
         if ok:
             self.model.settings.set(new_settings)
+        self._resize_rows_columns()
 
 
 class SettingsWindow(QDialog, Ui_Dialog):

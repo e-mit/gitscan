@@ -125,7 +125,8 @@ class AppSettings:
             self._save_repo_list()
 
     def _validate_and_set_preferences(self,
-                            preferences: dict[str, str | bool] | None) -> bool:
+                                      preferences: dict[str, str | bool] | None
+                                      ) -> bool:
         """Check for, and apply, the expected preferences."""
         if preferences is None:
             return False
