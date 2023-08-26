@@ -2,11 +2,14 @@
 import sys
 from typing import Any
 from pathlib import Path
+from threading import Event
+
 from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
 from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
-from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel, QUrl
+from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel
+from PyQt6.QtCore import QUrl, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPainter
 from PyQt6.QtGui import QPen, QTextCursor
 
@@ -276,13 +279,6 @@ class MyModel(QAbstractTableModel):
             )
         return summary
 
-    def search_and_read_repos(self, root_directory: str | Path) -> None:
-        """Perform a search for repositories, then read their data/status."""
-        self.settings.set_repo_list(
-            search.find_git_repos(root_directory,
-                                  self.settings.exclude_dirs))
-        self.refresh_all_data()
-
     def _read_repo(self, repo_path: str) -> dict[str, Any]:
         data = read.read_repo(repo_path, self.settings.fetch_remotes)
         if (not self.settings.fetch_remotes and data['remote_count'] > 0):
@@ -358,6 +354,25 @@ class MyModel(QAbstractTableModel):
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):
                 return col_tooltips[section]
+
+
+class SearchWorker(QObject):
+    search_ended = pyqtSignal(list)
+
+    def __init__(self,
+                 start_dir: str | Path,
+                 exclude_dirs: list[Path] = [],
+                 stop_event: Event | None = None):
+        self.start_dir = start_dir
+        self.exclude_dirs = exclude_dirs
+        self.stop_event = stop_event
+        super().__init__()
+
+    def run(self) -> None:
+        list_path_to_git = search.find_git_repos(self.start_dir,
+                                                 self.exclude_dirs,
+                                                 self.stop_event)
+        self.search_ended.emit(list_path_to_git)
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -481,8 +496,38 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             Qt.WindowType.Dialog,
             Qt.InputMethodHint.ImhNone)
         if ok and Path(search_path_str).is_dir():
-            self.model.search_and_read_repos(search_path_str)
             self.model.settings.set_search_path(search_path_str)
+            self.launch_search(search_path_str)
+
+    def cancel_search(self):
+        self.search_cancelled = True
+        self.stop_search_event.set()
+
+    def search_complete(self, repo_list):
+        if not self.search_cancelled:
+            self.model.settings.set_repo_list(repo_list)
+            self.model.refresh_all_data()
+        
+    def launch_search(self, search_path: str):
+        self.search_thread = QThread()
+        self.stop_search_event = Event()
+        self.worker = SearchWorker(search_path,
+                                   self.model.settings.exclude_dirs,
+                                   self.stop_search_event)
+        self.worker.moveToThread(self.search_thread)
+        self.search_thread.started.connect(self.worker.run)
+        self.search_thread.finished.connect(self.search_thread.deleteLater)
+        self.worker.search_ended.connect(self.search_thread.quit)
+        self.worker.search_ended.connect(self.worker.deleteLater)
+        self.worker.search_ended.connect(self.search_complete)
+        self.search_cancelled = False
+        self.search_thread.start()
+        self.box = QMessageBox(QMessageBox.Icon.NoIcon, "Search",
+                               "Search in progress...",
+                               QMessageBox.StandardButton.Cancel)
+        self.box.rejected.connect(self.cancel_search)
+        self.worker.search_ended.connect(self.box.close)
+        self.box.show()
 
     def _run_settings_dialog(self) -> None:
         """Launch dialog to get/update/display user-selected settings."""
