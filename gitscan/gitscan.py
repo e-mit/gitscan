@@ -289,8 +289,19 @@ class TableModel(QAbstractTableModel):
 
     def refresh_all_data(self) -> None:
         """Re-read all listed repos and store the data."""
-        self.repo_data = [self._read_repo(repo)
-                          for repo in self.settings.repo_list]
+        self.repo_data = []
+        retained_paths = []
+        for repo in self.settings.repo_list:
+            try:
+                data = self._read_repo(repo)
+            except AssertionError:
+                # Corrupt or not a repo
+                pass
+            else:
+                self.repo_data.append(data)
+                retained_paths.append(repo)
+        if len(retained_paths) != len(self.settings.repo_list):
+            self.settings.set_repo_list(retained_paths)
         self.layoutChanged.emit()
 
     def refresh_row(self, index: QModelIndex) -> None:
@@ -403,7 +414,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.splitter.setSizes([150, 100])
         self._update_view()
-        
+
     def _resize_rows_columns(self):
         self.tableView.verticalHeader().setMinimumSectionSize(0)
         self.tableView.resizeRowsToContents()

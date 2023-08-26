@@ -149,7 +149,7 @@ class AppSettings:
     def _create_default_settings(self) -> None:
         self.exclude_dirs: list[Path] = []
         self.ide_command = ["code", "-n"]
-        self.search_path = ""
+        self.search_path = os.environ['HOME']
         self.fetch_remotes = True
         if get_platform() == Platform.LINUX:
             self.terminal_command = "gnome-terminal"
