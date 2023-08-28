@@ -79,7 +79,6 @@ class TestFindGitRepos(unittest.TestCase):
             self.assertEqual(set(expected_list), set(list_path_to_git))
 
     def tearDown(self) -> None:
-        pass
         shutil.rmtree(self.temp_root_dir)
 
 

@@ -1,11 +1,86 @@
 """Extract information from git repos."""
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
+import subprocess
+import time
+import os
+import multiprocessing as mp
+from functools import partial
+
+import psutil
 from git import Repo  # type: ignore
 from git.exc import GitCommandError
 
 DETACHED_BRANCH_DISPLAY_NAME = "DETACHED"
 NO_BRANCH_DISPLAY_NAME = "-"
+
+
+def git_fetch_parallel(git_repo_directories: Sequence[Path | str],
+                       thread_pool_size: int | None = None,
+                       poll_period_s: float = 0.2,
+                       timeout_A_count: int = 50,
+                       timeout_B_count: int = 5
+                       ) -> list[str | None]:
+    """Run multiple git fetches from a thread pool.
+
+    Only fetches the default remote from each.
+    thread_pool_size=None uses cpu_count.
+    """
+    pfunc = partial(git_fetch_with_timeout, remote_name=None,
+                    poll_period_s=poll_period_s,
+                    timeout_A_count=timeout_A_count,
+                    timeout_B_count=timeout_B_count)
+    with mp.Pool(processes=thread_pool_size) as p:
+        results = p.map(pfunc, git_repo_directories)
+    return results
+
+
+def git_fetch_with_timeout(git_directory: Path | str,
+                           remote_name: str | None = None,
+                           poll_period_s: float = 0.2,
+                           timeout_A_count: int = 50,
+                           timeout_B_count: int = 5
+                           ) -> str | None:
+    """Run git fetch in a subprocess and kill it if necessary.
+
+    Returns a string description of the problem, or None if success.
+    """
+    parent = psutil.Process(os.getpid())
+    args = (['git', 'fetch'] if remote_name is None
+            else ['git', 'fetch', remote_name])
+    process = subprocess.Popen(args,
+                               shell=False, bufsize=0, close_fds=True,
+                               cwd=git_directory,
+                               stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL,
+                               text=False)
+    count_A = 0
+    count_B = 0
+    timeout = False
+    while process.poll() is None:
+        children = parent.children(recursive=True)
+        if any([child.status() != 'sleeping' for child in children]):
+            count_B = 0
+        else:
+            count_B += 1
+        count_A += 1
+        if count_A >= timeout_A_count or count_B >= timeout_B_count:
+            timeout = True
+            break
+        time.sleep(poll_period_s)
+
+    if timeout:
+        children = parent.children(recursive=True)
+        for child in children:
+            child.kill()
+        # Wait for the process to end: this is
+        # needed to avoid a ResourceWarning
+        process.wait(timeout_A_count*poll_period_s)
+        return "timeout"
+    else:
+        if process.returncode != 0:
+            return "error"
+        return None
 
 
 def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path, Path]:

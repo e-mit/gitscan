@@ -106,8 +106,8 @@ def create_temp_clone_git_repo(origin_repo_dir: str | Path,
                                bare: bool) -> tuple[Path, Path, Path]:
     """Create a new clone of a git repo, in a new temporary directory.
 
-    If bare, the git files are placed directly in origin_repo_dir.
-    If not bare, a .git directory is made in origin_repo_dir."""
+    If bare, the git files are placed directly in repo_dir.
+    If not bare, a .git directory is made in repo_dir."""
     containing_dir = Path(tempfile.mkdtemp())
     repo = Repo(origin_repo_dir)
     (new_path_to_git, repo_dir) = make_path_to_git(containing_dir,
