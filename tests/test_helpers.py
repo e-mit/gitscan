@@ -147,6 +147,15 @@ def create_remote_tracking_branches(path_to_current_repo: str | Path,
     repo.close()
 
 
+def create_local_branches(path_to_current_repo: str | Path,
+                          new_branch_count) -> None:
+    """Add new branches which do not track remotes."""
+    repo = Repo(path_to_current_repo)
+    for i in range(new_branch_count):
+        repo.git.branch(f"local{i}")
+    repo.close()
+
+
 def create_commits(repo_dir: Path, commit_count: int) -> None:
     repo = Repo(repo_dir)
     do_commits(repo, repo_dir, commit_count)

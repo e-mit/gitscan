@@ -9,6 +9,7 @@ from tests import test_helpers
 class TestReadRepoWithRemotes(TestReadRepo):
     ahead_count = 0
     behind_each_remote_count = [0]
+    local_only_branch_count = 0
 
     def setUp(self) -> None:
         super().setUp()  # Produces a new test repo
@@ -40,6 +41,8 @@ class TestReadRepoWithRemotes(TestReadRepo):
 
         # If required, do commits on final repo to go "ahead"
         test_helpers.create_commits(self.repo_dir, self.ahead_count)
+        test_helpers.create_local_branches(self.repo_dir,
+                                           self.local_only_branch_count)
         self.total_commits += self.ahead_count
         self.expected_info['name'] = self.clone_repo_name
         self.expected_info['containing_dir'] = self.containing_dir
@@ -47,7 +50,8 @@ class TestReadRepoWithRemotes(TestReadRepo):
         self.expected_info['bare'] = False
         self.expected_info['remote_count'] = self.remote_count
         self.expected_info['branch_count'] = (self.remote_count
-                                              + len(self.extra_branches))
+                                              + len(self.extra_branches)
+                                              + self.local_only_branch_count)
         self.expected_info['untracked_count'] = 0
         self.expected_info['index_changes'] = False
         self.expected_info['working_tree_changes'] = False
@@ -94,6 +98,13 @@ class TestReadRepoAheadAndBehindRemotes(TestReadRepoWithRemotes):
     ahead_count = 2
     behind_each_remote_count = [1, 3, 1, 0]
     less_than_2_commits = False
+
+
+class TestReadRepoAheadAndBehindRemotesWithLocals(TestReadRepoWithRemotes):
+    ahead_count = 2
+    behind_each_remote_count = [1, 3, 1, 0]
+    less_than_2_commits = False
+    local_only_branch_count = 2
 
 
 class TestReadRepoFailFetch(TestReadRepoWithRemotes):
