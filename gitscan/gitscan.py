@@ -167,13 +167,13 @@ class TableModel(QAbstractTableModel):
             count = self.repo_data[index.row()]['ahead_count']
             if count > 0:
                 data = "▲"
-                tooltip = ("Ahead of remote(s) by "
+                tooltip = ("Local branches are ahead of remotes by "
                            f"{count} commit" + self._add_s_if_plural(count))
         elif (index.column() == 8):
             count = self.repo_data[index.row()]['behind_count']
             if count > 0:
                 data = "▼"
-                tooltip = ("Behind remote(s) by "
+                tooltip = ("Local branches are behind remotes by "
                            f"{count} commit" + self._add_s_if_plural(count))
         elif (index.column() == 9):
             tag_count = self.repo_data[index.row()]['tag_count']
@@ -357,8 +357,8 @@ class TableModel(QAbstractTableModel):
         col_tooltips = ["Parent directory", "Repository name",
                         "Untracked file(s)", "Modified file(s)",
                         "Bare repository", "At least one stash",
-                        "Index has changes", "Ahead of all remotes",
-                        "Behind at least one remote", "Tag(s)"]
+                        "Index has changes", "Local branches ahead of remotes",
+                        "Local branches behind remotes", "Tag(s)"]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):

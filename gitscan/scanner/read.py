@@ -158,26 +158,27 @@ def read_repo(path_to_git: str | Path,
     if repo.head.is_detached:
         info['branch_name'] = DETACHED_BRANCH_DISPLAY_NAME
 
-    # Find the smallest number of commits ahead, and the number
-    # of unique commits behind.
-    remote_commits: set[str] = set()
-    ahead_counts: list[int] = []
+    # Find ahead/behind counts summed over all local branches which
+    # track remotes
+    info['behind_count'] = 0
+    info['ahead_count'] = 0
     info['fetch_failed'] = False
-    if not repo.bare and info['branch_count'] and fetch_remotes:
-        for remote in repo.remotes:
-            try:
-                repo.git.fetch(remote.name)
-                ahead_counts.append(sum(1 for _ in repo.iter_commits(
-                            f"{remote.name}/{info['branch_name']}"
-                            f"..{info['branch_name']}")))
-                remote_commits.update(c.hexsha for c in repo.iter_commits(
-                            f"{info['branch_name']}"
-                            f"..{remote.name}/{info['branch_name']}"))
-            except GitCommandError:
-                info['fetch_failed'] = True
+    if not repo.bare and info['branch_count']:
+        if fetch_remotes:
+            for remote in repo.remotes:
+                try:
+                    repo.git.fetch(remote.name)
+                except GitCommandError:
+                    info['fetch_failed'] = True
 
-    info['behind_count'] = len(remote_commits)
-    info['ahead_count'] = 0 if not ahead_counts else min(ahead_counts)
+        for branch in repo.branches:
+            if (branch.tracking_branch() is not None
+                and branch.tracking_branch() in repo.refs):
+                info['ahead_count'] += sum(1 for _ in repo.iter_commits(
+                            f"{branch.tracking_branch()}..{branch}"))
+                info['behind_count'] += sum(1 for _ in repo.iter_commits(
+                            f"{branch}..{branch.tracking_branch()}"))
+
     info['up_to_date'] = ((info['behind_count'] == 0) and
                           (info['ahead_count'] == 0))
     repo.close()
@@ -186,7 +187,7 @@ def read_repo(path_to_git: str | Path,
 
 def read_commits(path_to_git: str | Path,
                  commit_count: int) -> list[dict[str, str]]:
-    """Get the most recent commit information from the repo.
+    """Get the most recent commit information from the repo active branch.
 
     Return up to 'commit_count' commits, or fewer if not available.
     """

@@ -128,6 +128,25 @@ def add_remote(path_to_current_repo: str | Path,
     repo.close()
 
 
+def create_remote_tracking_branches(path_to_current_repo: str | Path,
+                                    new_remote_name: str,
+                                    remote_url: str | Path) -> None:
+    """Add a new remote and track its branch(es) locally.
+
+    Add the new remote and, for each of its branches, make a
+    tracking branch locally.
+    """
+    repo = Repo(path_to_current_repo)
+    refs_set_before = set(repo.refs)
+    repo.git.remote("add", new_remote_name, remote_url)
+    repo.git.fetch(new_remote_name)
+    new_refs = set(repo.refs) - refs_set_before
+    for ref in new_refs:
+        branch_name = Path(str(ref)).stem
+        repo.git.branch(new_remote_name + "_" + branch_name, str(ref))
+    repo.close()
+
+
 def create_commits(repo_dir: Path, commit_count: int) -> None:
     repo = Repo(repo_dir)
     do_commits(repo, repo_dir, commit_count)

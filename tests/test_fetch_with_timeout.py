@@ -17,7 +17,6 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.dirs_to_delete = [self.temp_root_dir]
 
     def test_not_a_git_repo(self) -> None:
-        print("test_not_a_git_repo")
         result = read.git_fetch_with_timeout(self.temp_root_dir)
         self.assertEqual(result, "error")
 
@@ -38,7 +37,6 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.assertEqual(result, "error")
 
     def test_nothing_to_fetch(self) -> None:
-        print("test_nothing_to_fetch")
         (origin_repo_dir, _) = test_helpers.create_git_repo(
                                             self.temp_root_dir,
                                             "origin_repo", 3,
@@ -55,7 +53,6 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_successful_fetch(self) -> None:
-        print("test_successful_fetch")
         (origin_repo_dir, _) = test_helpers.create_git_repo(
                                             self.temp_root_dir,
                                             "origin_repo", 3,
@@ -73,7 +70,6 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_successful_large_fetch(self) -> None:
-        print("test_successful_large_fetch")
         (origin_repo_dir, _) = test_helpers.create_git_repo(
                                             self.temp_root_dir,
                                             "origin_repo", 3,
@@ -91,7 +87,6 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_unreachable_remote(self) -> None:
-        print("test_unreachable_remote")
         (repo_dir, _) = test_helpers.create_git_repo(
                                             self.temp_root_dir,
                                             "no_remote", 1,
@@ -104,7 +99,6 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.assertEqual(result, "timeout")
 
     def test_password_hang(self) -> None:
-        print("test_password_hang")
         (repo_dir, _) = test_helpers.create_git_repo(
                                             self.temp_root_dir,
                                             "no_remote", 1,
@@ -118,7 +112,6 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.assertEqual(result, "timeout")
 
     def test_fetch_in_parallel(self) -> None:
-        print("test_fetch_in_parallel")
         # create several repos with different properties. These are:
         # not a repo, no remotes, up-to-date, fetch ok,
         # large fetch ok, unreachable, password hang
