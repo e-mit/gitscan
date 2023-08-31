@@ -130,7 +130,7 @@ def add_remote(path_to_current_repo: str | Path,
 
 def create_remote_tracking_branches(path_to_current_repo: str | Path,
                                     new_remote_name: str,
-                                    remote_url: str | Path) -> None:
+                                    remote_url: str | Path) -> list[str]:
     """Add a new remote and track its branch(es) locally.
 
     Add the new remote and, for each of its branches, make a
@@ -141,9 +141,24 @@ def create_remote_tracking_branches(path_to_current_repo: str | Path,
     repo.git.remote("add", new_remote_name, remote_url)
     repo.git.fetch(new_remote_name)
     new_refs = set(repo.refs) - refs_set_before
+    branch_names = []
     for ref in new_refs:
-        branch_name = Path(str(ref)).stem
-        repo.git.branch(new_remote_name + "_" + branch_name, str(ref))
+        new_branch_name = new_remote_name + "_" + Path(str(ref)).stem
+        repo.git.branch(new_branch_name, str(ref))
+        branch_names.append(new_branch_name)
+    repo.close()
+    return branch_names
+
+
+def do_commits_on_branches(repo_dir: str | Path, branch_names: list[str],
+                           commit_counts: list[int]) -> None:
+    """Do a number of commits on each branch."""
+    if (len(branch_names) != len(commit_counts)):
+        raise ValueError("Inconsistent list lengths.")
+    repo = Repo(repo_dir)
+    for i in range(len(branch_names)):
+        repo.git.checkout(branch_names[i])
+        do_commits(repo, Path(repo_dir), commit_counts[i])
     repo.close()
 
 

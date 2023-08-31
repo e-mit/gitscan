@@ -524,7 +524,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.search_cancelled:
             self.model.settings.set_repo_list(repo_list)
             self.model.refresh_all_data()
-        
+
     def launch_search(self, search_path: str):
         self.search_thread = QThread()
         self.stop_search_event = Event()
