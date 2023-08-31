@@ -40,6 +40,7 @@ WARNING_ICON = "resources/warning.svg"
 REFRESH_ICON = "resources/refresh.svg"
 UNFETCHED_REMOTE_WARNING = "Remotes not fetched"
 FETCH_FAILED_WARNING = "Fetch failed"
+FETCH_TIMEOUT_WARNING = "Fetch timed-out"
 ICON_SCALE_FACTOR = 0.7
 ROW_SCALE_FACTOR = 1.5
 COLUMN_SCALE_FACTOR = 1.1
@@ -283,8 +284,12 @@ class TableModel(QAbstractTableModel):
         data = read.read_repo(repo_path, self.settings.fetch_remotes)
         if (not self.settings.fetch_remotes and data['remote_count'] > 0):
             data['warning'] = UNFETCHED_REMOTE_WARNING
-        elif data['fetch_failed']:
+        elif data['fetch_status'] is None:
+            pass
+        elif read.FetchStatus.ERROR in data['fetch_status']:
             data['warning'] = FETCH_FAILED_WARNING
+        elif read.FetchStatus.TIMEOUT in data['fetch_status']:
+            data['warning'] = FETCH_TIMEOUT_WARNING
         return data
 
     def refresh_all_data(self) -> None:

@@ -6,13 +6,20 @@ import time
 import os
 import multiprocessing as mp
 from functools import partial
+from enum import Flag, auto
 
 import psutil
 from git import Repo  # type: ignore
-from git.exc import GitCommandError
 
 DETACHED_BRANCH_DISPLAY_NAME = "DETACHED"
 NO_BRANCH_DISPLAY_NAME = "-"
+
+
+class FetchStatus(Flag):
+    """Represents the result of an attempt to fetch a single remote."""
+    TIMEOUT = auto()
+    ERROR = auto()
+    OK = auto()
 
 
 def git_fetch_parallel(git_repo_directories: Sequence[Path | str],
@@ -20,7 +27,7 @@ def git_fetch_parallel(git_repo_directories: Sequence[Path | str],
                        poll_period_s: float = 0.2,
                        timeout_A_count: int = 50,
                        timeout_B_count: int = 5
-                       ) -> list[str | None]:
+                       ) -> list[FetchStatus]:
     """Run multiple git fetches from a thread pool.
 
     Only fetches the default remote from each.
@@ -40,7 +47,7 @@ def git_fetch_with_timeout(git_directory: Path | str,
                            poll_period_s: float = 0.2,
                            timeout_A_count: int = 50,
                            timeout_B_count: int = 5
-                           ) -> str | None:
+                           ) -> FetchStatus:
     """Run git fetch in a subprocess and kill it if necessary.
 
     Returns a string description of the problem, or None if success.
@@ -76,11 +83,11 @@ def git_fetch_with_timeout(git_directory: Path | str,
         # Wait for the process to end: this is
         # needed to avoid a ResourceWarning
         process.wait(timeout_A_count*poll_period_s)
-        return "timeout"
+        return FetchStatus.TIMEOUT
     else:
         if process.returncode != 0:
-            return "error"
-        return None
+            return FetchStatus.ERROR
+        return FetchStatus.OK
 
 
 def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path, Path]:
@@ -104,7 +111,11 @@ def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path, Path]:
 
 
 def read_repo(path_to_git: str | Path,
-              fetch_remotes: bool = True) -> dict[str, Any]:
+              fetch_remotes: bool = True,
+              poll_period_s: float = 0.2,
+              timeout_A_count: int = 50,
+              timeout_B_count: int = 5
+              ) -> dict[str, Any]:
     """Extract basic information about the repo.
 
     see extract_repo_name() for path_to_git definition.
@@ -162,18 +173,24 @@ def read_repo(path_to_git: str | Path,
     # track remotes
     info['behind_count'] = 0
     info['ahead_count'] = 0
-    info['fetch_failed'] = False
+    info['fetch_status'] = None
     if not repo.bare and info['branch_count']:
         if fetch_remotes:
             for remote in repo.remotes:
-                try:
-                    repo.git.fetch(remote.name)
-                except GitCommandError:
-                    info['fetch_failed'] = True
+                status = git_fetch_with_timeout(
+                                            info['repo_dir'],
+                                            remote.name,
+                                            poll_period_s,
+                                            timeout_A_count,
+                                            timeout_B_count)
+                if info['fetch_status'] is None:
+                    info['fetch_status'] = status
+                else:
+                    info['fetch_status'] |= status
 
         for branch in repo.branches:
             if (branch.tracking_branch() is not None
-                and branch.tracking_branch() in repo.refs):
+                    and branch.tracking_branch() in repo.refs):
                 info['ahead_count'] += sum(1 for _ in repo.iter_commits(
                             f"{branch.tracking_branch()}..{branch}"))
                 info['behind_count'] += sum(1 for _ in repo.iter_commits(

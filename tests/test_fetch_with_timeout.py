@@ -1,7 +1,6 @@
 import unittest
 from pathlib import Path
 import shutil
-import time
 import tempfile
 
 from gitscan.scanner import read
@@ -18,7 +17,7 @@ class TestFetchWithTimeout(unittest.TestCase):
 
     def test_not_a_git_repo(self) -> None:
         result = read.git_fetch_with_timeout(self.temp_root_dir)
-        self.assertEqual(result, "error")
+        self.assertEqual(result, read.FetchStatus.ERROR)
 
     def test_no_remotes(self) -> None:
         # Expect "None" if default fetch is used, or
@@ -30,11 +29,11 @@ class TestFetchWithTimeout(unittest.TestCase):
                                             "main", 1, False,
                                             True, False)
         result = read.git_fetch_with_timeout(repo_dir)
-        self.assertIsNone(result)
+        self.assertEqual(result, read.FetchStatus.OK)
         result = read.git_fetch_with_timeout(repo_dir, remote_name='origin')
-        self.assertEqual(result, "error")
+        self.assertEqual(result, read.FetchStatus.ERROR)
         result = read.git_fetch_with_timeout(repo_dir, remote_name='thename')
-        self.assertEqual(result, "error")
+        self.assertEqual(result, read.FetchStatus.ERROR)
 
     def test_nothing_to_fetch(self) -> None:
         (origin_repo_dir, _) = test_helpers.create_git_repo(
@@ -50,7 +49,7 @@ class TestFetchWithTimeout(unittest.TestCase):
                                         False)
         self.dirs_to_delete.append(containing_dir)
         result = read.git_fetch_with_timeout(repo_dir)
-        self.assertIsNone(result)
+        self.assertEqual(result, read.FetchStatus.OK)
 
     def test_successful_fetch(self) -> None:
         (origin_repo_dir, _) = test_helpers.create_git_repo(
@@ -67,7 +66,7 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.dirs_to_delete.append(containing_dir)
         test_helpers.create_commits(origin_repo_dir, 3)
         result = read.git_fetch_with_timeout(repo_dir)
-        self.assertIsNone(result)
+        self.assertEqual(result, read.FetchStatus.OK)
 
     def test_successful_large_fetch(self) -> None:
         (origin_repo_dir, _) = test_helpers.create_git_repo(
@@ -84,7 +83,7 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.dirs_to_delete.append(containing_dir)
         test_helpers.create_commits(origin_repo_dir, 1000)
         result = read.git_fetch_with_timeout(repo_dir)
-        self.assertIsNone(result)
+        self.assertEqual(result, read.FetchStatus.OK)
 
     def test_unreachable_remote(self) -> None:
         (repo_dir, _) = test_helpers.create_git_repo(
@@ -93,10 +92,11 @@ class TestFetchWithTimeout(unittest.TestCase):
                                             [], 0, False,
                                             "main", 1, False,
                                             True, False)
-        # the following remote will cause the fetch command to hang until SSH timeout
+        # the following remote will cause the fetch command to
+        # hang until SSH timeout
         test_helpers.add_remote(repo_dir, "origin", UNREACHABLE_REPO)
         result = read.git_fetch_with_timeout(repo_dir)
-        self.assertEqual(result, "timeout")
+        self.assertEqual(result, read.FetchStatus.TIMEOUT)
 
     def test_password_hang(self) -> None:
         (repo_dir, _) = test_helpers.create_git_repo(
@@ -109,7 +109,7 @@ class TestFetchWithTimeout(unittest.TestCase):
         remote_name = "needs_auth"
         test_helpers.add_remote(repo_dir, remote_name, PRIVATE_REPO)
         result = read.git_fetch_with_timeout(repo_dir, remote_name=remote_name)
-        self.assertEqual(result, "timeout")
+        self.assertEqual(result, read.FetchStatus.TIMEOUT)
 
     def test_fetch_in_parallel(self) -> None:
         # create several repos with different properties. These are:
@@ -158,8 +158,10 @@ class TestFetchWithTimeout(unittest.TestCase):
         git_repo_directories = [self.temp_root_dir, no_remotes,
                                 large_fetch_ok, fetch_ok, up_to_date,
                                 unreachable, password_hang]
-        expected_results = ["error", None, None, None,
-                            None, "timeout", "timeout"]
+        expected_results = [read.FetchStatus.ERROR, read.FetchStatus.OK,
+                            read.FetchStatus.OK, read.FetchStatus.OK,
+                            read.FetchStatus.OK, read.FetchStatus.TIMEOUT,
+                            read.FetchStatus.TIMEOUT]
         results = read.git_fetch_parallel(git_repo_directories)
         self.assertEqual(results, expected_results)
 

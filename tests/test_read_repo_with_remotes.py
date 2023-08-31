@@ -4,6 +4,7 @@ import shutil
 
 from test_read_repo import TestReadRepo
 from tests import test_helpers
+from gitscan.scanner import read
 
 
 class TestReadRepoWithRemotes(TestReadRepo):
@@ -68,6 +69,7 @@ class TestReadRepoWithRemotes(TestReadRepo):
         self.expected_info['working_tree_changes'] = False
         self.expected_info['stash'] = False
         self.expected_info['behind_count'] = sum(self.behind_each_remote_count)
+        self.expected_info['fetch_status'] = read.FetchStatus.OK
         self.expected_info['ahead_count'] = sum(
             self.ahead_of_each_remote_count)
 
@@ -129,7 +131,8 @@ class TestReadRepoFailFetch(TestReadRepoWithRemotes):
         super().setUp()
         test_helpers.add_remote(self.path_to_git, "fakerepo",
                                 "https://example.com/fake-repo")
-        self.expected_info['fetch_failed'] = True
+        self.expected_info['fetch_status'] = (read.FetchStatus.ERROR
+                                              | read.FetchStatus.OK)
         self.expected_info['remote_count'] = self.remote_count + 1
         self.less_than_2_commits = False
 
@@ -139,6 +142,7 @@ class TestReadRepoCloneOfEmpty(TestReadRepoWithRemotes):
         self.commit_count = 0
         super().setUp()
         self.expected_info['branch_count'] = 0
+        self.expected_info['fetch_status'] = None
 
 
 class TestReadRepoCloneOfEmptyWithCommits(TestReadRepoWithRemotes):
@@ -150,6 +154,7 @@ class TestReadRepoCloneOfEmptyWithCommits(TestReadRepoWithRemotes):
         self.expected_info['branch_count'] = 0
         self.less_than_2_commits = True
         self.total_commits = 0
+        self.expected_info['fetch_status'] = None
 
 
 class TestReadRepoCloneOfDetachedHead(TestReadRepoWithRemotes):
@@ -159,6 +164,7 @@ class TestReadRepoCloneOfDetachedHead(TestReadRepoWithRemotes):
         super().setUp()
         self.commit_count = 0
         self.expected_info['branch_count'] = 0
+        self.expected_info['fetch_status'] = None
 
 
 if __name__ == '__main__':

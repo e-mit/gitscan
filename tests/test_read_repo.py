@@ -32,8 +32,8 @@ class TestReadRepo(unittest.TestCase):
         else:
             self.total_commits = self.commit_count
             if self.active_branch != 'main':
-                self.total_commits += (1 +
-                            self.extra_branches.index(self.active_branch))
+                self.total_commits += (
+                    1 + self.extra_branches.index(self.active_branch))
         if self.detached_head:
             self.total_commits -= self.commit_count - 1
 
@@ -73,7 +73,7 @@ class TestReadRepo(unittest.TestCase):
             'detached_head': self.detached_head,
             'ahead_count': 0,
             'behind_count': 0,
-            'fetch_failed': False
+            'fetch_status': None
             }
 
     def tearDown(self) -> None:
