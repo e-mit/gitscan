@@ -211,7 +211,7 @@ class TableModel(QAbstractTableModel):
                 data = "-"
             else:
                 data = arrow.get(last_commit_datetime).humanize().capitalize()
-            tooltip = "Last commit on active branch"
+            tooltip = "Last commit on local branches"
         elif (index.column() == OPEN_FOLDER_COLUMN):
             tooltip = "Open directory"
         elif (index.column() == OPEN_DIFFTOOL_COLUMN):

@@ -140,12 +140,16 @@ def read_repo(path_to_git: str | Path,
         info['untracked_count'] = 0
         info['stash'] = False
 
+    last_commits = []
+    for branch in repo.branches:
+        last_commits.append(
+            repo.iter_commits(branch).__next__().committed_datetime)
+    info['last_commit_datetime'] = (None if not last_commits
+                                    else max(last_commits))
+
     if info['branch_count'] == 0:
         info['branch_name'] = NO_BRANCH_DISPLAY_NAME
-        info['last_commit_datetime'] = None
     else:
-        info['last_commit_datetime'] = repo.iter_commits(
-                                        ).__next__().committed_datetime
         try:
             info['branch_name'] = repo.active_branch.name
         except TypeError:
