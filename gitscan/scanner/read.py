@@ -27,20 +27,20 @@ class FetchStatus(Flag):
 
 def read_repo_parallel(paths_to_git: Sequence[Path | str],
                        fetch_remotes: bool = True,
-                       thread_pool_size: int | None = None,
+                       pool_size: int | None = None,
                        poll_period_s: float = 0.2,
                        timeout_A_count: int = 50,
                        timeout_B_count: int = 5
                        ) -> list[None | dict[str, Any]]:
-    """Run multiple repo readers from a thread pool.
+    """Run multiple repo readers from a process pool.
 
-    thread_pool_size=None uses cpu_count.
+    pool_size=None uses cpu_count.
     """
     pfunc = partial(read_repo, fetch_remotes=fetch_remotes,
                     poll_period_s=poll_period_s,
                     timeout_A_count=timeout_A_count,
                     timeout_B_count=timeout_B_count)
-    with mp.Pool(processes=thread_pool_size) as p:
+    with mp.Pool(processes=pool_size) as p:
         results = p.map(pfunc, paths_to_git)
     return results
 

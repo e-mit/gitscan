@@ -1,24 +1,29 @@
 """Main file for GUI app."""
 import sys
-from typing import Any
+from typing import Any, Union, Callable
 from pathlib import Path
-from threading import Event
+import threading
+import multiprocessing
+import multiprocessing.synchronize
+
+import arrow
 
 from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
 from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel
-from PyQt6.QtCore import QUrl, pyqtSignal, QObject, QThread
+from PyQt6.QtCore import QUrl, pyqtSignal, QObject, QThread, pyqtBoundSignal
 from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPainter
 from PyQt6.QtGui import QPen, QTextCursor
-
-import arrow
 
 from gui.test_table import Ui_MainWindow
 from gui.settings_dialog import Ui_Dialog
 from scanner import search, read, settings
 from scanner.settings import AppSettings
+
+PYQT_SLOT = Union[Callable[..., None], pyqtBoundSignal]
+EVENT_TYPE = Union[threading.Event, multiprocessing.synchronize.Event]
 
 APP_TITLE = "Gitscan"
 APP_SUBTITLE = "a git repository status viewer"
@@ -277,21 +282,25 @@ class TableModel(QAbstractTableModel):
             )
         return summary
 
-    def refresh_all_data(self) -> None:
-        """Re-read all listed repos and store the data."""
-        results = read.read_repo_parallel(self.settings.repo_list,
-                                          self.settings.fetch_remotes)
-        repo_data = []
-        retained_paths = []
-        for i, data in enumerate(results):
-            if data is not None:
-                repo_data.append(data)
-                retained_paths.append(self.settings.repo_list[i])
-        if True:
-            if len(retained_paths) != len(self.settings.repo_list):
+    def _refresh_complete(self, results):
+        if not self.cd.cancelled:
+            repo_data = []
+            retained_paths = []
+            for i, data in enumerate(results):
+                if data is not None:
+                    repo_data.append(data)
+                    retained_paths.append(self.settings.repo_list[i])
+            if (len(retained_paths) != len(self.settings.repo_list)):
                 self.settings.set_repo_list(retained_paths)
             self.repo_data = repo_data
             self.layoutChanged.emit()
+
+    def refresh_all_data(self) -> None:
+        """Re-read all listed repos and store the data."""
+        self.cd = CancellableDialog(ReadWorker(self.settings.repo_list,
+                                               self.settings.fetch_remotes),
+                                    self._refresh_complete)
+        self.cd.launch("Updating", "Repo update in progress...")
 
     def refresh_row(self, index: QModelIndex) -> None:
         """Re-read one repo and update the data."""
@@ -363,31 +372,52 @@ class TableModel(QAbstractTableModel):
 
 
 class CancellableTaskWorker(QObject):
-    finished: pyqtSignal
-
-    def __init__(self):
-        self.stop_event = Event()
-        super().__init__()
+    finished = pyqtSignal(list)
 
     def run(self) -> None:
         raise NotImplementedError
 
+    def get_stop_event(self) -> EVENT_TYPE:
+        raise NotImplementedError
+
 
 class SearchWorker(CancellableTaskWorker):
-    finished = pyqtSignal(list)
 
     def __init__(self,
                  start_dir: str | Path,
                  exclude_dirs: list[Path] = []):
         self.start_dir = start_dir
         self.exclude_dirs = exclude_dirs
+        self.stop_event = threading.Event()
         super().__init__()
+
+    def get_stop_event(self) -> EVENT_TYPE:
+        return self.stop_event
 
     def run(self) -> None:
         list_path_to_git = search.find_git_repos(self.start_dir,
                                                  self.exclude_dirs,
                                                  self.stop_event)
         self.finished.emit(list_path_to_git)
+
+
+class ReadWorker(CancellableTaskWorker):
+
+    def __init__(self,
+                 repo_list: list[str],
+                 fetch_remotes: bool):
+        self.repo_list = repo_list
+        self.fetch_remotes = fetch_remotes
+        self.stop_event = multiprocessing.Event()
+        super().__init__()
+
+    def get_stop_event(self) -> EVENT_TYPE:
+        return self.stop_event
+
+    def run(self) -> None:
+        results = read.read_repo_parallel(self.repo_list,
+                                          self.fetch_remotes)
+        self.finished.emit(results)
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -525,9 +555,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def launch_search(self, search_path: str):
         self.cd = CancellableDialog(
-                SearchWorker(search_path,
-                             self.model.settings.exclude_dirs))
-        self.cd.worker.finished.connect(self._search_complete)
+                    SearchWorker(search_path,
+                                 self.model.settings.exclude_dirs),
+                    self._search_complete)
         self.cd.launch("Search", "Search in progress...")
 
     def _run_settings_dialog(self) -> None:
@@ -543,26 +573,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 class CancellableDialog:
     """Show a dialog while doing a long task, allowing early cancellation."""
 
-    def __init__(self, worker: CancellableTaskWorker):
+    def __init__(self, worker: CancellableTaskWorker,
+                 on_worker_finish: PYQT_SLOT) -> None:
+        """Supply the worker object and a function to execute when done."""
         self.thread = QThread()
         self.worker = worker
+        self.stop_event = worker.get_stop_event()
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.thread.finished.connect(self.thread.deleteLater)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.finished.connect(on_worker_finish)
         self.cancelled = False
 
-    def _cancel(self):
+    def _cancel(self) -> None:
         self.cancelled = True
-        self.worker.stop_event.set()
+        self.stop_event.set()
 
     def launch(self, title: str, text: str) -> None:
+        """Start the task and show the wait dialog box."""
         self.thread.start()
         self.box = QMessageBox(QMessageBox.Icon.NoIcon, title,
                                text, QMessageBox.StandardButton.Cancel)
         self.box.rejected.connect(self._cancel)
         self.worker.finished.connect(self.box.close)  # type: ignore
+        self.box.finished.connect(self.box.deleteLater)
         self.box.show()
 
 
