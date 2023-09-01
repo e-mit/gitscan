@@ -38,9 +38,6 @@ OPEN_TERMINAL_ICON = "resources/terminal.svg"
 OPEN_IDE_ICON = "resources/window.svg"
 WARNING_ICON = "resources/warning.svg"
 REFRESH_ICON = "resources/refresh.svg"
-UNFETCHED_REMOTE_WARNING = "Remotes not fetched"
-FETCH_FAILED_WARNING = "Fetch failed"
-FETCH_TIMEOUT_WARNING = "Fetch timed-out"
 ICON_SCALE_FACTOR = 0.7
 ROW_SCALE_FACTOR = 1.5
 COLUMN_SCALE_FACTOR = 1.1
@@ -71,7 +68,7 @@ class StyleDelegate(QStyledItemDelegate):
         elif (index.column() == REFRESH_COLUMN):
             icon = QIcon(REFRESH_ICON)
         elif (index.column() == WARNING_COLUMN):
-            if 'warning' in self.model.repo_data[index.row()]:
+            if self.model.repo_data[index.row()]['warning'] is not None:
                 icon = QIcon(WARNING_ICON)
 
         if icon is not None:
@@ -227,7 +224,7 @@ class TableModel(QAbstractTableModel):
         elif (index.column() == REFRESH_COLUMN):
             tooltip = "Refresh"
         elif (index.column() == WARNING_COLUMN):
-            if 'warning' in self.repo_data[index.row()]:
+            if self.repo_data[index.row()]['warning'] is not None:
                 tooltip = self.repo_data[index.row()]['warning']
             else:
                 tooltip = ""
@@ -280,26 +277,12 @@ class TableModel(QAbstractTableModel):
             )
         return summary
 
-    def _read_repo(self, repo_path: str) -> None | dict[str, Any]:
-        data = read.read_repo(repo_path, self.settings.fetch_remotes)
-        if data is None:
-            return None
-        if (not self.settings.fetch_remotes and data['remote_count'] > 0):
-            data['warning'] = UNFETCHED_REMOTE_WARNING
-        elif data['fetch_status'] is None:
-            pass
-        elif read.FetchStatus.ERROR in data['fetch_status']:
-            data['warning'] = FETCH_FAILED_WARNING
-        elif read.FetchStatus.TIMEOUT in data['fetch_status']:
-            data['warning'] = FETCH_TIMEOUT_WARNING
-        return data
-
     def refresh_all_data(self) -> None:
         """Re-read all listed repos and store the data."""
         repo_data = []
         retained_paths = []
         for repo in self.settings.repo_list:
-            data = self._read_repo(repo)
+            data = read.read_repo(repo, self.settings.fetch_remotes)
             if data is not None:
                 repo_data.append(data)
                 retained_paths.append(repo)
@@ -312,7 +295,8 @@ class TableModel(QAbstractTableModel):
     def refresh_row(self, index: QModelIndex) -> None:
         """Re-read one repo and update the data."""
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        data = self._read_repo(self.settings.repo_list[index.row()])
+        data = read.read_repo(self.settings.repo_list[index.row()],
+                              self.settings.fetch_remotes)
         if data is not None:
             self.repo_data[index.row()] = data
         else:

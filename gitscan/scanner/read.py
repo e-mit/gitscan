@@ -13,6 +13,9 @@ from git import Repo  # type: ignore
 
 DETACHED_BRANCH_DISPLAY_NAME = "DETACHED"
 NO_BRANCH_DISPLAY_NAME = "-"
+UNFETCHED_REMOTE_WARNING = "Remotes not fetched"
+FETCH_FAILED_WARNING = "Fetch failed"
+FETCH_TIMEOUT_WARNING = "Fetch timed-out"
 
 
 class FetchStatus(Flag):
@@ -201,6 +204,15 @@ def read_repo(path_to_git: str | Path,
 
     info['up_to_date'] = ((info['behind_count'] == 0) and
                           (info['ahead_count'] == 0))
+    info['warning'] = None
+    if (not fetch_remotes and info['remote_count'] > 0):
+        info['warning'] = UNFETCHED_REMOTE_WARNING
+    elif info['fetch_status'] is None:
+        pass
+    elif FetchStatus.ERROR in info['fetch_status']:
+        info['warning'] = FETCH_FAILED_WARNING
+    elif FetchStatus.TIMEOUT in info['fetch_status']:
+        info['warning'] = FETCH_TIMEOUT_WARNING
     repo.close()
     return info
 
