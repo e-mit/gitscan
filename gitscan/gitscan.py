@@ -280,8 +280,10 @@ class TableModel(QAbstractTableModel):
             )
         return summary
 
-    def _read_repo(self, repo_path: str) -> dict[str, Any]:
+    def _read_repo(self, repo_path: str) -> None | dict[str, Any]:
         data = read.read_repo(repo_path, self.settings.fetch_remotes)
+        if data is None:
+            return None
         if (not self.settings.fetch_remotes and data['remote_count'] > 0):
             data['warning'] = UNFETCHED_REMOTE_WARNING
         elif data['fetch_status'] is None:
@@ -294,26 +296,27 @@ class TableModel(QAbstractTableModel):
 
     def refresh_all_data(self) -> None:
         """Re-read all listed repos and store the data."""
-        self.repo_data = []
+        repo_data = []
         retained_paths = []
         for repo in self.settings.repo_list:
-            try:
-                data = self._read_repo(repo)
-            except AssertionError:
-                # Corrupt or not a repo
-                pass
-            else:
-                self.repo_data.append(data)
+            data = self._read_repo(repo)
+            if data is not None:
+                repo_data.append(data)
                 retained_paths.append(repo)
-        if len(retained_paths) != len(self.settings.repo_list):
-            self.settings.set_repo_list(retained_paths)
-        self.layoutChanged.emit()
+        if True:
+            if len(retained_paths) != len(self.settings.repo_list):
+                self.settings.set_repo_list(retained_paths)
+            self.repo_data = repo_data
+            self.layoutChanged.emit()
 
     def refresh_row(self, index: QModelIndex) -> None:
         """Re-read one repo and update the data."""
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        self.repo_data[index.row()] = self._read_repo(
-            self.settings.repo_list[index.row()])
+        data = self._read_repo(self.settings.repo_list[index.row()])
+        if data is not None:
+            self.repo_data[index.row()] = data
+        else:
+            pass  # TODO
         self.dataChanged.emit(self.createIndex(index.row(), 0),
                               self.createIndex(index.row(),
                                                TOTAL_COLUMNS - 1))
