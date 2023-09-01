@@ -279,13 +279,14 @@ class TableModel(QAbstractTableModel):
 
     def refresh_all_data(self) -> None:
         """Re-read all listed repos and store the data."""
+        results = read.read_repo_parallel(self.settings.repo_list,
+                                          self.settings.fetch_remotes)
         repo_data = []
         retained_paths = []
-        for repo in self.settings.repo_list:
-            data = read.read_repo(repo, self.settings.fetch_remotes)
+        for i, data in enumerate(results):
             if data is not None:
                 repo_data.append(data)
-                retained_paths.append(repo)
+                retained_paths.append(self.settings.repo_list[i])
         if True:
             if len(retained_paths) != len(self.settings.repo_list):
                 self.settings.set_repo_list(retained_paths)

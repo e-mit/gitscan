@@ -89,6 +89,7 @@ class TestReadRepo(unittest.TestCase):
         info: None | dict[str, Any] = read.read_repo(self.path_to_git)
         if info is None:
             raise ValueError("Git repository was nonexistent or corrupt.")
+        info.pop('warning')
         last_commit_datetime = info.pop('last_commit_datetime')
         with self.subTest(key='last_commit_datetime'):
             if (self.commit_count == 0):
