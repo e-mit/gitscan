@@ -6,6 +6,10 @@ from test_read_repo import TestReadRepo
 from tests import test_helpers
 from gitscan.scanner import read
 
+UNREACHABLE_REPO = "ssh://e@172.24.1.1:322/fake/repo.git"
+PRIVATE_REPO = "https://github.com/e-mit/test_auth"
+FAIL_REPO = "https://example.com/fake-repo"
+
 
 class TestReadRepoWithRemotes(TestReadRepo):
     ahead_of_each_remote_count = [0]
@@ -130,7 +134,7 @@ class TestReadRepoFailFetch(TestReadRepoWithRemotes):
         self.behind_each_remote_count = [1, 3, 1, 0]
         super().setUp()
         test_helpers.add_remote(self.path_to_git, "fakerepo",
-                                "https://example.com/fake-repo")
+                                FAIL_REPO)
         self.expected_info['fetch_status'] = (read.FetchStatus.ERROR
                                               | read.FetchStatus.OK)
         self.expected_info['remote_count'] = self.remote_count + 1
@@ -165,6 +169,65 @@ class TestReadRepoCloneOfDetachedHead(TestReadRepoWithRemotes):
         self.commit_count = 0
         self.expected_info['branch_count'] = 0
         self.expected_info['fetch_status'] = None
+
+
+class TestReadRepoRemoteHang(TestReadRepoWithRemotes):
+    def setUp(self) -> None:
+        self.ahead_of_each_remote_count = [1, 1, 0, 1]
+        self.behind_each_remote_count = [1, 3, 1, 0]
+        super().setUp()
+        test_helpers.add_remote(self.path_to_git, "hangrepo",
+                                UNREACHABLE_REPO)
+        self.expected_info['fetch_status'] = (read.FetchStatus.TIMEOUT
+                                              | read.FetchStatus.OK)
+        self.expected_info['remote_count'] = self.remote_count + 1
+        self.less_than_2_commits = False
+
+
+class TestReadRepoRemotePassword(TestReadRepoWithRemotes):
+    def setUp(self) -> None:
+        self.ahead_of_each_remote_count = [1, 1]
+        self.behind_each_remote_count = [0, 3]
+        super().setUp()
+        test_helpers.add_remote(self.path_to_git, "privaterepo",
+                                PRIVATE_REPO)
+        self.expected_info['fetch_status'] = (read.FetchStatus.TIMEOUT
+                                              | read.FetchStatus.OK)
+        self.expected_info['remote_count'] = self.remote_count + 1
+        self.less_than_2_commits = False
+
+
+class TestReadRepoRemotePasswordHang(TestReadRepoWithRemotes):
+    def setUp(self) -> None:
+        self.ahead_of_each_remote_count = [1, 1]
+        self.behind_each_remote_count = [0, 3]
+        super().setUp()
+        test_helpers.add_remote(self.path_to_git, "privaterepo",
+                                PRIVATE_REPO)
+        test_helpers.add_remote(self.path_to_git, "hangrepo",
+                                UNREACHABLE_REPO)
+        self.expected_info['fetch_status'] = (read.FetchStatus.TIMEOUT
+                                              | read.FetchStatus.OK)
+        self.expected_info['remote_count'] = self.remote_count + 2
+        self.less_than_2_commits = False
+
+
+class TestReadRepoRemotePasswordHangFail(TestReadRepoWithRemotes):
+    def setUp(self) -> None:
+        self.ahead_of_each_remote_count = [0, 2]
+        self.behind_each_remote_count = [2, 0]
+        super().setUp()
+        test_helpers.add_remote(self.path_to_git, "failrepo",
+                                FAIL_REPO)
+        test_helpers.add_remote(self.path_to_git, "privaterepo",
+                                PRIVATE_REPO)
+        test_helpers.add_remote(self.path_to_git, "hangrepo",
+                                UNREACHABLE_REPO)
+        self.expected_info['fetch_status'] = (read.FetchStatus.TIMEOUT
+                                              | read.FetchStatus.OK
+                                              | read.FetchStatus.ERROR)
+        self.expected_info['remote_count'] = self.remote_count + 3
+        self.less_than_2_commits = False
 
 
 if __name__ == '__main__':
