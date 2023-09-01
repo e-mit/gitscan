@@ -362,23 +362,32 @@ class TableModel(QAbstractTableModel):
                 return col_tooltips[section]
 
 
-class SearchWorker(QObject):
-    search_ended = pyqtSignal(list)
+class CancellableTaskWorker(QObject):
+    finished: pyqtSignal
+
+    def __init__(self):
+        self.stop_event = Event()
+        super().__init__()
+
+    def run(self) -> None:
+        raise NotImplementedError
+
+
+class SearchWorker(CancellableTaskWorker):
+    finished = pyqtSignal(list)
 
     def __init__(self,
                  start_dir: str | Path,
-                 exclude_dirs: list[Path] = [],
-                 stop_event: Event | None = None):
+                 exclude_dirs: list[Path] = []):
         self.start_dir = start_dir
         self.exclude_dirs = exclude_dirs
-        self.stop_event = stop_event
         super().__init__()
 
     def run(self) -> None:
         list_path_to_git = search.find_git_repos(self.start_dir,
                                                  self.exclude_dirs,
                                                  self.stop_event)
-        self.search_ended.emit(list_path_to_git)
+        self.finished.emit(list_path_to_git)
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -509,35 +518,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.model.settings.set_search_path(search_path_str)
             self.launch_search(search_path_str)
 
-    def cancel_search(self):
-        self.search_cancelled = True
-        self.stop_search_event.set()
-
-    def search_complete(self, repo_list):
-        if not self.search_cancelled:
+    def _search_complete(self, repo_list):
+        if not self.cd.cancelled:
             self.model.settings.set_repo_list(repo_list)
             self.model.refresh_all_data()
 
     def launch_search(self, search_path: str):
-        self.search_thread = QThread()
-        self.stop_search_event = Event()
-        self.worker = SearchWorker(search_path,
-                                   self.model.settings.exclude_dirs,
-                                   self.stop_search_event)
-        self.worker.moveToThread(self.search_thread)
-        self.search_thread.started.connect(self.worker.run)
-        self.search_thread.finished.connect(self.search_thread.deleteLater)
-        self.worker.search_ended.connect(self.search_thread.quit)
-        self.worker.search_ended.connect(self.worker.deleteLater)
-        self.worker.search_ended.connect(self.search_complete)
-        self.search_cancelled = False
-        self.search_thread.start()
-        self.box = QMessageBox(QMessageBox.Icon.NoIcon, "Search",
-                               "Search in progress...",
-                               QMessageBox.StandardButton.Cancel)
-        self.box.rejected.connect(self.cancel_search)
-        self.worker.search_ended.connect(self.box.close)
-        self.box.show()
+        self.cd = CancellableDialog(
+                SearchWorker(search_path,
+                             self.model.settings.exclude_dirs))
+        self.cd.worker.finished.connect(self._search_complete)
+        self.cd.launch("Search", "Search in progress...")
 
     def _run_settings_dialog(self) -> None:
         """Launch dialog to get/update/display user-selected settings."""
@@ -547,6 +538,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if ok:
             self.model.settings.set(new_settings)
         self._resize_rows_columns()
+
+
+class CancellableDialog:
+    """Show a dialog while doing a long task, allowing early cancellation."""
+
+    def __init__(self, worker: CancellableTaskWorker):
+        self.thread = QThread()
+        self.worker = worker
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.cancelled = False
+
+    def _cancel(self):
+        self.cancelled = True
+        self.worker.stop_event.set()
+
+    def launch(self, title: str, text: str) -> None:
+        self.thread.start()
+        self.box = QMessageBox(QMessageBox.Icon.NoIcon, title,
+                               text, QMessageBox.StandardButton.Cancel)
+        self.box.rejected.connect(self._cancel)
+        self.worker.finished.connect(self.box.close)  # type: ignore
+        self.box.show()
 
 
 class SettingsWindow(QDialog, Ui_Dialog):

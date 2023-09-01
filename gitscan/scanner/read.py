@@ -125,95 +125,95 @@ def read_repo(path_to_git: str | Path,
     """
     try:
         repo = Repo(path_to_git)
+        info: dict[str, Any] = {}
+        (info['name'], info['repo_dir'],
+            info['containing_dir']) = extract_repo_name(path_to_git)
+        info['bare'] = repo.bare
+        info['detached_head'] = repo.head.is_detached
+        info['remote_count'] = len(repo.remotes)
+        info['branch_count'] = len(repo.branches)  # type: ignore
+        info['tag_count'] = len(repo.tags)
+        info['index_changes'] = repo.is_dirty(index=True,
+                                              working_tree=False,
+                                              untracked_files=False,
+                                              submodules=False)
+        info['working_tree_changes'] = repo.is_dirty(index=False,
+                                                     working_tree=True,
+                                                     untracked_files=False,
+                                                     submodules=False)
+
+        try:
+            info['commit_count'] = sum(1 for _ in repo.iter_commits())
+        except ValueError:
+            # occurs with no commits
+            info['commit_count'] = 0
+
+        if not repo.bare:
+            info['untracked_count'] = len(repo.untracked_files)
+            info['stash'] = len(repo.git.stash("list")) > 0
+        else:
+            info['untracked_count'] = 0
+            info['stash'] = False
+
+        last_commits = []
+        for branch in repo.branches:
+            last_commits.append(
+                repo.iter_commits(branch).__next__().committed_datetime)
+        info['last_commit_datetime'] = (None if not last_commits
+                                        else max(last_commits))
+
+        if info['branch_count'] == 0:
+            info['branch_name'] = NO_BRANCH_DISPLAY_NAME
+        else:
+            try:
+                info['branch_name'] = repo.active_branch.name
+            except TypeError:
+                info['branch_name'] = NO_BRANCH_DISPLAY_NAME
+
+        if repo.head.is_detached:
+            info['branch_name'] = DETACHED_BRANCH_DISPLAY_NAME
+
+        # Find ahead/behind counts summed over all local branches which
+        # track remotes
+        info['behind_count'] = 0
+        info['ahead_count'] = 0
+        info['fetch_status'] = None
+        if not repo.bare and info['branch_count']:
+            if fetch_remotes:
+                for remote in repo.remotes:
+                    status = git_fetch_with_timeout(
+                                                info['repo_dir'],
+                                                remote.name,
+                                                poll_period_s,
+                                                timeout_A_count,
+                                                timeout_B_count)
+                    if info['fetch_status'] is None:
+                        info['fetch_status'] = status
+                    else:
+                        info['fetch_status'] |= status
+
+            for branch in repo.branches:
+                if (branch.tracking_branch() is not None
+                        and branch.tracking_branch() in repo.refs):
+                    info['ahead_count'] += sum(1 for _ in repo.iter_commits(
+                                f"{branch.tracking_branch()}..{branch}"))
+                    info['behind_count'] += sum(1 for _ in repo.iter_commits(
+                                f"{branch}..{branch.tracking_branch()}"))
+
+        info['up_to_date'] = ((info['behind_count'] == 0) and
+                              (info['ahead_count'] == 0))
+        info['warning'] = None
+        if (not fetch_remotes and info['remote_count'] > 0):
+            info['warning'] = UNFETCHED_REMOTE_WARNING
+        elif info['fetch_status'] is None:
+            pass
+        elif FetchStatus.ERROR in info['fetch_status']:
+            info['warning'] = FETCH_FAILED_WARNING
+        elif FetchStatus.TIMEOUT in info['fetch_status']:
+            info['warning'] = FETCH_TIMEOUT_WARNING
+        repo.close()
     except Exception:
         return None
-    info: dict[str, Any] = {}
-    (info['name'], info['repo_dir'],
-     info['containing_dir']) = extract_repo_name(path_to_git)
-    info['bare'] = repo.bare
-    info['detached_head'] = repo.head.is_detached
-    info['remote_count'] = len(repo.remotes)
-    info['branch_count'] = len(repo.branches)  # type: ignore
-    info['tag_count'] = len(repo.tags)
-    info['index_changes'] = repo.is_dirty(index=True,
-                                          working_tree=False,
-                                          untracked_files=False,
-                                          submodules=False)
-    info['working_tree_changes'] = repo.is_dirty(index=False,
-                                                 working_tree=True,
-                                                 untracked_files=False,
-                                                 submodules=False)
-
-    try:
-        info['commit_count'] = sum(1 for _ in repo.iter_commits())
-    except ValueError:
-        # occurs with no commits
-        info['commit_count'] = 0
-
-    if not repo.bare:
-        info['untracked_count'] = len(repo.untracked_files)
-        info['stash'] = len(repo.git.stash("list")) > 0
-    else:
-        info['untracked_count'] = 0
-        info['stash'] = False
-
-    last_commits = []
-    for branch in repo.branches:
-        last_commits.append(
-            repo.iter_commits(branch).__next__().committed_datetime)
-    info['last_commit_datetime'] = (None if not last_commits
-                                    else max(last_commits))
-
-    if info['branch_count'] == 0:
-        info['branch_name'] = NO_BRANCH_DISPLAY_NAME
-    else:
-        try:
-            info['branch_name'] = repo.active_branch.name
-        except TypeError:
-            info['branch_name'] = NO_BRANCH_DISPLAY_NAME
-
-    if repo.head.is_detached:
-        info['branch_name'] = DETACHED_BRANCH_DISPLAY_NAME
-
-    # Find ahead/behind counts summed over all local branches which
-    # track remotes
-    info['behind_count'] = 0
-    info['ahead_count'] = 0
-    info['fetch_status'] = None
-    if not repo.bare and info['branch_count']:
-        if fetch_remotes:
-            for remote in repo.remotes:
-                status = git_fetch_with_timeout(
-                                            info['repo_dir'],
-                                            remote.name,
-                                            poll_period_s,
-                                            timeout_A_count,
-                                            timeout_B_count)
-                if info['fetch_status'] is None:
-                    info['fetch_status'] = status
-                else:
-                    info['fetch_status'] |= status
-
-        for branch in repo.branches:
-            if (branch.tracking_branch() is not None
-                    and branch.tracking_branch() in repo.refs):
-                info['ahead_count'] += sum(1 for _ in repo.iter_commits(
-                            f"{branch.tracking_branch()}..{branch}"))
-                info['behind_count'] += sum(1 for _ in repo.iter_commits(
-                            f"{branch}..{branch.tracking_branch()}"))
-
-    info['up_to_date'] = ((info['behind_count'] == 0) and
-                          (info['ahead_count'] == 0))
-    info['warning'] = None
-    if (not fetch_remotes and info['remote_count'] > 0):
-        info['warning'] = UNFETCHED_REMOTE_WARNING
-    elif info['fetch_status'] is None:
-        pass
-    elif FetchStatus.ERROR in info['fetch_status']:
-        info['warning'] = FETCH_FAILED_WARNING
-    elif FetchStatus.TIMEOUT in info['fetch_status']:
-        info['warning'] = FETCH_TIMEOUT_WARNING
-    repo.close()
     return info
 
 
