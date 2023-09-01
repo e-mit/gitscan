@@ -8,6 +8,7 @@ from tests import test_helpers
 
 UNREACHABLE_REPO = "ssh://e@172.24.1.1:322/fake/repo.git"
 PRIVATE_REPO = "https://github.com/e-mit/test_auth"
+FAIL_REPO = "https://example.com/fake-repo"
 
 
 class TestFetchWithTimeout(unittest.TestCase):
@@ -113,57 +114,111 @@ class TestFetchWithTimeout(unittest.TestCase):
 
     def test_fetch_in_parallel(self) -> None:
         # create several repos with different properties. These are:
-        # not a repo, no remotes, up-to-date, fetch ok,
+        # no remotes, up-to-date, fetch ok,
         # large fetch ok, unreachable, password hang
-        (no_remotes, _) = test_helpers.create_git_repo(
+        (no_remotes, no_remotes_git) = test_helpers.create_git_repo(
                                             self.temp_root_dir,
-                                            "no_remote", 1,
+                                            "no_remotes", 1,
                                             [], 0, False,
                                             "main", 1, False,
                                             True, False)
-        (containing_dir1,
-         large_fetch_ok, _) = test_helpers.create_temp_clone_git_repo(
+        (containing_dir1, _,
+         large_fetch_ok_git) = test_helpers.create_temp_clone_git_repo(
                                         no_remotes,
-                                        "clone_repo1",
+                                        "large_fetch_ok",
                                         False)
         self.dirs_to_delete.append(containing_dir1)
-        test_helpers.create_commits(no_remotes, 1000)
-        (containing_dir2,
-         fetch_ok, _) = test_helpers.create_temp_clone_git_repo(
+        test_helpers.create_commits(no_remotes, 1000)  # wants repo folder
+        (containing_dir2, _,
+         fetch_ok_git) = test_helpers.create_temp_clone_git_repo(
                                         no_remotes,
-                                        "clone_repo2",
+                                        "fetch_ok",
                                         False)
         self.dirs_to_delete.append(containing_dir2)
-        test_helpers.create_commits(no_remotes, 3)
-        (containing_dir3,
-         up_to_date, _) = test_helpers.create_temp_clone_git_repo(
+        # repo with one OK remote and one that hangs unreachable:
+        (containing_dir2b, fetch_ok_hang,
+         fetch_ok_hang_git) = test_helpers.create_temp_clone_git_repo(
                                         no_remotes,
-                                        "clone_repo3",
+                                        "fetch_ok_hang",
+                                        False)
+        self.dirs_to_delete.append(containing_dir2b)
+        test_helpers.add_remote(fetch_ok_hang, "hanger", UNREACHABLE_REPO)
+        # repo with one OK remote and one that hangs for password:
+        (containing_dir2c, fetch_ok_pword,
+         fetch_ok_pword_git) = test_helpers.create_temp_clone_git_repo(
+                                        no_remotes,
+                                        "fetch_ok_pword",
+                                        False)
+        self.dirs_to_delete.append(containing_dir2c)
+        test_helpers.add_remote(fetch_ok_pword, "pword", PRIVATE_REPO)
+        ###
+        # repo with one OK remote, one that hangs for password, one
+        # that hangs unreachable, one that errors
+        (containing_dir2d, fetch_4,
+         fetch_4_git) = test_helpers.create_temp_clone_git_repo(
+                                        no_remotes,
+                                        "fetch_4",
+                                        False)
+        self.dirs_to_delete.append(containing_dir2d)
+        test_helpers.add_remote(fetch_4, "private", PRIVATE_REPO)
+        test_helpers.add_remote(fetch_4, "unreachable", UNREACHABLE_REPO)
+        test_helpers.add_remote(fetch_4, "error", FAIL_REPO)
+        ###
+        test_helpers.create_commits(no_remotes, 3)
+        (containing_dir3, _,
+         up_to_date_git) = test_helpers.create_temp_clone_git_repo(
+                                        no_remotes,
+                                        "up_to_date",
                                         False)
         self.dirs_to_delete.append(containing_dir3)
-        (unreachable, _) = test_helpers.create_git_repo(
+        (unreachable, unreachable_git) = test_helpers.create_git_repo(
                                             self.temp_root_dir,
                                             "unreachable", 1,
                                             [], 0, False,
                                             "main", 1, False,
                                             True, False)
         test_helpers.add_remote(unreachable, "origin", UNREACHABLE_REPO)
-        (password_hang, _) = test_helpers.create_git_repo(
+        (password_hang, password_hang_git) = test_helpers.create_git_repo(
                                             self.temp_root_dir,
                                             "hang", 1,
                                             [], 0, False,
                                             "main", 1, False,
                                             True, False)
         test_helpers.add_remote(password_hang, "origin", PRIVATE_REPO)
-        git_repo_directories = [self.temp_root_dir, no_remotes,
-                                large_fetch_ok, fetch_ok, up_to_date,
-                                unreachable, password_hang]
-        expected_results = [read.FetchStatus.ERROR, read.FetchStatus.OK,
-                            read.FetchStatus.OK, read.FetchStatus.OK,
-                            read.FetchStatus.OK, read.FetchStatus.TIMEOUT,
-                            read.FetchStatus.TIMEOUT]
-        results = read.git_fetch_parallel(git_repo_directories)
-        self.assertEqual(results, expected_results)
+        (non_exist, non_exist_git) = test_helpers.create_git_repo(
+                                            self.temp_root_dir,
+                                            "non_exist", 1,
+                                            [], 0, False,
+                                            "main", 1, False,
+                                            True, False)
+        test_helpers.add_remote(non_exist, "foo", FAIL_REPO)
+        ##########
+        paths_to_git = [no_remotes_git,
+                        large_fetch_ok_git, fetch_ok_git, fetch_ok_hang_git,
+                        fetch_ok_pword_git, fetch_4_git, up_to_date_git,
+                        unreachable_git, password_hang_git, non_exist_git]
+        expected_status = [None,
+                           read.FetchStatus.OK, read.FetchStatus.OK,
+                           read.FetchStatus.OK | read.FetchStatus.TIMEOUT,
+                           read.FetchStatus.OK | read.FetchStatus.TIMEOUT,
+                           (read.FetchStatus.OK | read.FetchStatus.TIMEOUT
+                            | read.FetchStatus.ERROR), read.FetchStatus.OK,
+                           read.FetchStatus.TIMEOUT, read.FetchStatus.TIMEOUT,
+                           read.FetchStatus.ERROR]
+        expected_ahead = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        expected_behind = [0, 1003, 3, 3, 3, 3, 0, 0, 0, 0]
+        expected_remotes = [0, 1, 1, 2, 2, 4, 1, 1, 1, 1]
+        results = read.read_repo_parallel(paths_to_git)
+        for i in range(len(paths_to_git)):
+            with self.subTest(i=i):
+                self.assertEqual(results[i]['fetch_status'],
+                                 expected_status[i])
+                self.assertEqual(results[i]['ahead_count'],
+                                 expected_ahead[i])
+                self.assertEqual(results[i]['behind_count'],
+                                 expected_behind[i])
+                self.assertEqual(results[i]['remote_count'],
+                                 expected_remotes[i])
 
     def tearDown(self) -> None:
         for d in self.dirs_to_delete:

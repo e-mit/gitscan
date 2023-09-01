@@ -86,7 +86,9 @@ class TestReadRepo(unittest.TestCase):
 
     def test_read_repo(self) -> None:
         self.update_uptodate()
-        info: dict[str, Any] = read.read_repo(self.path_to_git)
+        info: None | dict[str, Any] = read.read_repo(self.path_to_git)
+        if info is None:
+            raise ValueError("Git repository was nonexistent or corrupt.")
         last_commit_datetime = info.pop('last_commit_datetime')
         with self.subTest(key='last_commit_datetime'):
             if (self.commit_count == 0):

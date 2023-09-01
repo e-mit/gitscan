@@ -22,23 +22,23 @@ class FetchStatus(Flag):
     OK = auto()
 
 
-def git_fetch_parallel(git_repo_directories: Sequence[Path | str],
+def read_repo_parallel(paths_to_git: Sequence[Path | str],
+                       fetch_remotes: bool = True,
                        thread_pool_size: int | None = None,
                        poll_period_s: float = 0.2,
                        timeout_A_count: int = 50,
                        timeout_B_count: int = 5
-                       ) -> list[FetchStatus]:
-    """Run multiple git fetches from a thread pool.
+                       ) -> list[None | dict[str, Any]]:
+    """Run multiple repo readers from a thread pool.
 
-    Only fetches the default remote from each.
     thread_pool_size=None uses cpu_count.
     """
-    pfunc = partial(git_fetch_with_timeout, remote_name=None,
+    pfunc = partial(read_repo, fetch_remotes=fetch_remotes,
                     poll_period_s=poll_period_s,
                     timeout_A_count=timeout_A_count,
                     timeout_B_count=timeout_B_count)
     with mp.Pool(processes=thread_pool_size) as p:
-        results = p.map(pfunc, git_repo_directories)
+        results = p.map(pfunc, paths_to_git)
     return results
 
 
@@ -115,12 +115,15 @@ def read_repo(path_to_git: str | Path,
               poll_period_s: float = 0.2,
               timeout_A_count: int = 50,
               timeout_B_count: int = 5
-              ) -> dict[str, Any]:
+              ) -> None | dict[str, Any]:
     """Extract basic information about the repo.
 
     see extract_repo_name() for path_to_git definition.
     """
-    repo = Repo(path_to_git)
+    try:
+        repo = Repo(path_to_git)
+    except Exception:
+        return None
     info: dict[str, Any] = {}
     (info['name'], info['repo_dir'],
      info['containing_dir']) = extract_repo_name(path_to_git)
