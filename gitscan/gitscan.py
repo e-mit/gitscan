@@ -416,7 +416,8 @@ class ReadWorker(CancellableTaskWorker):
 
     def run(self) -> None:
         results = read.read_repo_parallel(self.repo_list,
-                                          self.fetch_remotes)
+                                          self.fetch_remotes,
+                                          self.stop_event)
         self.finished.emit(results)
 
 
@@ -589,6 +590,7 @@ class CancellableDialog:
 
     def _cancel(self) -> None:
         self.cancelled = True
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         self.stop_event.set()
 
     def launch(self, title: str, text: str) -> None:
@@ -598,6 +600,7 @@ class CancellableDialog:
                                text, QMessageBox.StandardButton.Cancel)
         self.box.rejected.connect(self._cancel)
         self.worker.finished.connect(self.box.close)  # type: ignore
+        self.worker.finished.connect(QApplication.restoreOverrideCursor)
         self.box.finished.connect(self.box.deleteLater)
         self.box.show()
 

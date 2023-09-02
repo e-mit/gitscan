@@ -5,11 +5,14 @@ import subprocess
 import time
 import os
 import multiprocessing as mp
+import multiprocessing.synchronize
 from functools import partial
 from enum import Flag, auto
 
 import psutil
 from git import Repo  # type: ignore
+
+MP_EVENT = multiprocessing.synchronize.Event
 
 DETACHED_BRANCH_DISPLAY_NAME = "DETACHED"
 NO_BRANCH_DISPLAY_NAME = "-"
@@ -25,8 +28,17 @@ class FetchStatus(Flag):
     OK = auto()
 
 
+stop_event_global = None
+
+
+def init_pool_stop_event(evt: MP_EVENT | None):
+    global stop_event_global
+    stop_event_global = evt
+
+
 def read_repo_parallel(paths_to_git: Sequence[Path | str],
                        fetch_remotes: bool = True,
+                       stop_event: MP_EVENT | None = None,
                        pool_size: int | None = None,
                        poll_period_s: float = 0.2,
                        timeout_A_count: int = 50,
@@ -40,13 +52,15 @@ def read_repo_parallel(paths_to_git: Sequence[Path | str],
                     poll_period_s=poll_period_s,
                     timeout_A_count=timeout_A_count,
                     timeout_B_count=timeout_B_count)
-    with mp.Pool(processes=pool_size) as p:
+    with mp.Pool(processes=pool_size, initializer=init_pool_stop_event,
+                 initargs=(stop_event,)) as p:
         results = p.map(pfunc, paths_to_git)
     return results
 
 
 def git_fetch_with_timeout(git_directory: Path | str,
                            remote_name: str | None = None,
+                           stop_event: MP_EVENT | None = None,
                            poll_period_s: float = 0.2,
                            timeout_A_count: int = 50,
                            timeout_B_count: int = 5
@@ -67,6 +81,7 @@ def git_fetch_with_timeout(git_directory: Path | str,
     count_A = 0
     count_B = 0
     timeout = False
+    stop = False
     while process.poll() is None:
         children = parent.children(recursive=True)
         if any([child.status() != 'sleeping' for child in children]):
@@ -77,9 +92,12 @@ def git_fetch_with_timeout(git_directory: Path | str,
         if count_A >= timeout_A_count or count_B >= timeout_B_count:
             timeout = True
             break
+        if (stop_event is not None) and stop_event.is_set():
+            stop = True
+            break
         time.sleep(poll_period_s)
 
-    if timeout:
+    if timeout or stop:
         children = parent.children(recursive=True)
         for child in children:
             child.kill()
@@ -123,6 +141,8 @@ def read_repo(path_to_git: str | Path,
 
     see extract_repo_name() for path_to_git definition.
     """
+    if (stop_event_global is not None) and stop_event_global.is_set():
+        return None
     try:
         repo = Repo(path_to_git)
         info: dict[str, Any] = {}
@@ -181,9 +201,13 @@ def read_repo(path_to_git: str | Path,
         if not repo.bare and info['branch_count']:
             if fetch_remotes:
                 for remote in repo.remotes:
+                    if (stop_event_global is not None and
+                        stop_event_global.is_set()):
+                        return None
                     status = git_fetch_with_timeout(
                                                 info['repo_dir'],
                                                 remote.name,
+                                                stop_event_global,
                                                 poll_period_s,
                                                 timeout_A_count,
                                                 timeout_B_count)
