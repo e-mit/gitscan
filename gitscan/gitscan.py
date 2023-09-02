@@ -116,7 +116,7 @@ class TableModel(QAbstractTableModel):
               ((index.column() >= OPEN_FOLDER_COLUMN and
                 index.column() <= WARNING_COLUMN) or
                (index.column() >= 2 and
-                index.column() <= 10))):
+                index.column() <= 11))):
             return Qt.AlignmentFlag.AlignCenter
 
     @staticmethod
@@ -157,7 +157,7 @@ class TableModel(QAbstractTableModel):
         elif (index.column() == 4):
             if self.repo_data[index.row()]['bare']:
                 data = "B"
-                tooltip = "Bare repository"
+                tooltip = "Bare/mirror repository"
         elif (index.column() == 5):
             if self.repo_data[index.row()]['stash']:
                 data = "S"
@@ -192,20 +192,20 @@ class TableModel(QAbstractTableModel):
                            + self._add_s_if_plural(submodule_count))
         elif (index.column() == 11):
             remote_count = self.repo_data[index.row()]['remote_count']
-            data = (str(remote_count) + " remote"
-                    + self._add_s_if_plural(remote_count))
-            if remote_count == 0:
-                tooltip = "No remotes"
-            else:
-                tooltip = data
+            if remote_count > 0:
+                tooltip = (str(remote_count) + " remote"
+                           + self._add_s_if_plural(remote_count) + ": "
+                           + ", ".join(self.repo_data[index.row()]['remote_names']))
+                data = str(remote_count)
         elif (index.column() == 12):
             branch_count = self.repo_data[index.row()]['branch_count']
-            data = str(branch_count)
-            data += " branch" if (branch_count == 1) else " branches"
+            data = str(branch_count) + " local "
+            data += "branch" if (branch_count == 1) else "branches"
             if branch_count == 0:
                 tooltip = "No branches"
             else:
-                tooltip = data
+                tooltip = (data + ": "
+                           + ", ".join(self.repo_data[index.row()]['branch_names']))
         elif (index.column() == 13):
             data = self.repo_data[index.row()]['branch_name']
             if self.repo_data[index.row()]['detached_head']:
@@ -224,10 +224,11 @@ class TableModel(QAbstractTableModel):
         elif (index.column() == OPEN_FOLDER_COLUMN):
             tooltip = "Open directory"
         elif (index.column() == OPEN_DIFFTOOL_COLUMN):
-            if ((not self.repo_data[index.row()]['bare']) and
-                    (self.repo_data[index.row()]['working_tree_changes'] or
-                        self.repo_data[index.row()]['commit_count'] > 1)):
-                tooltip = "Open in difftool"
+            if self.repo_data[index.row()]['working_tree_changes']:
+                tooltip = "View working tree in difftool"
+            elif (self.repo_data[index.row()]['bare'] or
+                  self.repo_data[index.row()]['commit_count'] > 1):
+                tooltip = "View last commit in difftool"
         elif (index.column() == OPEN_TERMINAL_COLUMN):
             tooltip = "Open in terminal"
         elif (index.column() == OPEN_IDE_COLUMN):
@@ -361,13 +362,13 @@ class TableModel(QAbstractTableModel):
                    role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
         col_titles = ["Parent directory", "Name", "U", "M", "B",
-                      "S", "I", "▲", "▼", "T", "⦾"]
+                      "S", "I", "▲", "▼", "T", "⦾", "R"]
         col_tooltips = ["Parent directory", "Repository name",
                         "Untracked file(s)", "Modified file(s)",
-                        "Bare repository", "At least one stash",
+                        "Bare/mirror repository", "At least one stash",
                         "Index has changes", "Local branches ahead of remotes",
                         "Local branches behind remotes", "Tag(s)",
-                        "Submodule(s)"]
+                        "Submodule(s)", "Remote(s)"]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):
@@ -453,6 +454,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tableView.setSizeAdjustPolicy(
             QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.splitter.setSizes([150, 100])
+        self.tableView.horizontalHeader().setHighlightSections(False) 
         self._update_view()
 
     def _resize_rows_columns(self):
