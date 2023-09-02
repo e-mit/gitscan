@@ -30,7 +30,7 @@ APP_SUBTITLE = "a git repository status viewer"
 APP_VERSION = "0.1.0"
 PROJECT_GITHUB_URL = "https://github.com/e-mit/gitscan"
 VIEW_COMMIT_COUNT = 3  # Show (at most) this many commits in the lower pane
-OPEN_FOLDER_COLUMN = 14
+OPEN_FOLDER_COLUMN = 15
 OPEN_DIFFTOOL_COLUMN = OPEN_FOLDER_COLUMN + 1
 OPEN_TERMINAL_COLUMN = OPEN_FOLDER_COLUMN + 2
 OPEN_IDE_COLUMN = OPEN_FOLDER_COLUMN + 3
@@ -116,7 +116,7 @@ class TableModel(QAbstractTableModel):
               ((index.column() >= OPEN_FOLDER_COLUMN and
                 index.column() <= WARNING_COLUMN) or
                (index.column() >= 2 and
-                index.column() <= 9))):
+                index.column() <= 10))):
             return Qt.AlignmentFlag.AlignCenter
 
     @staticmethod
@@ -185,6 +185,12 @@ class TableModel(QAbstractTableModel):
                 tooltip = (str(tag_count) + " tag"
                            + self._add_s_if_plural(tag_count))
         elif (index.column() == 10):
+            submodule_count = self.repo_data[index.row()]['submodule_count']
+            if submodule_count > 0:
+                data = str(submodule_count)
+                tooltip = (str(submodule_count) + " submodule"
+                           + self._add_s_if_plural(submodule_count))
+        elif (index.column() == 11):
             remote_count = self.repo_data[index.row()]['remote_count']
             data = (str(remote_count) + " remote"
                     + self._add_s_if_plural(remote_count))
@@ -192,7 +198,7 @@ class TableModel(QAbstractTableModel):
                 tooltip = "No remotes"
             else:
                 tooltip = data
-        elif (index.column() == 11):
+        elif (index.column() == 12):
             branch_count = self.repo_data[index.row()]['branch_count']
             data = str(branch_count)
             data += " branch" if (branch_count == 1) else " branches"
@@ -200,7 +206,7 @@ class TableModel(QAbstractTableModel):
                 tooltip = "No branches"
             else:
                 tooltip = data
-        elif (index.column() == 12):
+        elif (index.column() == 13):
             data = self.repo_data[index.row()]['branch_name']
             if self.repo_data[index.row()]['detached_head']:
                 tooltip = "Detached HEAD state"
@@ -208,7 +214,7 @@ class TableModel(QAbstractTableModel):
                 tooltip = "No branches"
             else:
                 tooltip = "Active branch"
-        elif (index.column() == 13):
+        elif (index.column() == 14):
             last_commit_datetime = self.repo_data[index.row()]['last_commit_datetime']
             if last_commit_datetime is None:
                 data = "-"
@@ -355,12 +361,13 @@ class TableModel(QAbstractTableModel):
                    role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
         col_titles = ["Parent directory", "Name", "U", "M", "B",
-                      "S", "I", "▲", "▼", "T"]
+                      "S", "I", "▲", "▼", "T", "⦾"]
         col_tooltips = ["Parent directory", "Repository name",
                         "Untracked file(s)", "Modified file(s)",
                         "Bare repository", "At least one stash",
                         "Index has changes", "Local branches ahead of remotes",
-                        "Local branches behind remotes", "Tag(s)"]
+                        "Local branches behind remotes", "Tag(s)",
+                        "Submodule(s)"]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):
