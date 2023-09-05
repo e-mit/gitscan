@@ -116,7 +116,7 @@ class TableModel(QAbstractTableModel):
               ((index.column() >= OPEN_FOLDER_COLUMN and
                 index.column() <= WARNING_COLUMN) or
                (index.column() >= 2 and
-                index.column() <= 11))):
+                index.column() <= 12))):
             return Qt.AlignmentFlag.AlignCenter
 
     @staticmethod
@@ -199,19 +199,20 @@ class TableModel(QAbstractTableModel):
                 data = str(remote_count)
         elif (index.column() == 12):
             branch_count = self.repo_data[index.row()]['branch_count']
-            data = str(branch_count) + " local "
-            data += "branch" if (branch_count == 1) else "branches"
+            data = str(branch_count)
             if branch_count == 0:
-                tooltip = "No branches"
+                tooltip = "No local branches"
             else:
-                tooltip = (data + ": "
-                           + ", ".join(self.repo_data[index.row()]['branch_names']))
+                tooltip = str(branch_count) + " local "
+                tooltip += "branch" if (branch_count == 1) else "branches"
+                tooltip += (": "
+                    + ", ".join(self.repo_data[index.row()]['branch_names']))
         elif (index.column() == 13):
             data = self.repo_data[index.row()]['branch_name']
             if self.repo_data[index.row()]['detached_head']:
                 tooltip = "Detached HEAD state"
             elif self.repo_data[index.row()]['branch_count'] == 0:
-                tooltip = "No branches"
+                tooltip = "No local branches"
             else:
                 tooltip = "Active branch"
         elif (index.column() == 14):
@@ -362,13 +363,13 @@ class TableModel(QAbstractTableModel):
                    role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
         col_titles = ["Parent directory", "Name", "U", "M", "B",
-                      "S", "I", "▲", "▼", "T", "⦾", "R"]
+                      "S", "I", "▲", "▼", "T", "⦾", "R", "L"]
         col_tooltips = ["Parent directory", "Repository name",
                         "Untracked file(s)", "Modified file(s)",
                         "Bare/mirror repository", "At least one stash",
                         "Index has changes", "Local branches ahead of remotes",
                         "Local branches behind remotes", "Tag(s)",
-                        "Submodule(s)", "Remote(s)"]
+                        "Submodule(s)", "Remote(s)", "Local branch(es)"]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):
