@@ -374,6 +374,7 @@ class TableModel(QAbstractTableModel):
                         "Index has changes", "Local branches ahead of remotes",
                         "Local branches behind remotes", "Tag(s)",
                         "Submodule(s)", "Remote(s)", "Local branch(es)"]
+        left_align = [True, True]
         if (role == Qt.ItemDataRole.DisplayRole and
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):
@@ -382,6 +383,9 @@ class TableModel(QAbstractTableModel):
                 orient == Qt.Orientation.Horizontal):
             if section < len(col_titles):
                 return col_tooltips[section]
+        elif (role == Qt.ItemDataRole.TextAlignmentRole):
+            if section < len(left_align) and left_align[section]:
+                return Qt.AlignmentFlag.AlignLeft
 
 
 class CancellableTaskWorker(QObject):
@@ -459,7 +463,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tableView.setSizeAdjustPolicy(
             QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.splitter.setSizes([150, 100])
-        self.tableView.horizontalHeader().setHighlightSections(False) 
+        self.tableView.horizontalHeader().setHighlightSections(False)
         self._update_view()
 
     def _resize_rows_columns(self):
