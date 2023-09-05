@@ -46,6 +46,7 @@ REFRESH_ICON = "resources/refresh.svg"
 ICON_SCALE_FACTOR = 0.7
 ROW_SCALE_FACTOR = 1.5
 COLUMN_SCALE_FACTOR = 1.1
+ROW_SHADING_ALPHA = 100
 
 
 class StyleDelegate(QStyledItemDelegate):
@@ -111,7 +112,7 @@ class TableModel(QAbstractTableModel):
         elif role == Qt.ItemDataRole.ToolTipRole:
             return self._display_data(index, Qt.ItemDataRole.ToolTipRole)
         elif role == Qt.ItemDataRole.BackgroundRole:
-            return QColor(self.row_shading(index))
+            return self.row_shading_colour(index)
         elif (role == Qt.ItemDataRole.TextAlignmentRole and
               ((index.column() >= OPEN_FOLDER_COLUMN and
                 index.column() <= WARNING_COLUMN) or
@@ -257,20 +258,22 @@ class TableModel(QAbstractTableModel):
         """Part of the Qt model interface."""
         return TOTAL_COLUMNS
 
-    def row_shading(self, index: QModelIndex) -> str:
+    def row_shading_colour(self, index: QModelIndex) -> QColor:
         """Get row colour for the repo list to indicate status."""
         if not self.valid_index(index):
-            return ""
+            return QColor()
         if ((self.repo_data[index.row()]['untracked_count'] > 0)
                 or self.repo_data[index.row()]['working_tree_changes']
                 or self.repo_data[index.row()]['index_changes']):
-            return "red"
+            return QColor(255, 0, 0, ROW_SHADING_ALPHA)
         elif (self.repo_data[index.row()]['behind_count'] > 0):
-            return "yellow"
+            return QColor(255, 255, 0, ROW_SHADING_ALPHA)
+        elif self.repo_data[index.row()]['stash']:
+            return QColor(255, 0, 255, ROW_SHADING_ALPHA)
         elif (self.repo_data[index.row()]['ahead_count'] > 0):
-            return "cyan"
+            return QColor(0, 255, 255, ROW_SHADING_ALPHA)
         else:
-            return "white"
+            return QColor("white")
 
     def get_commit_html(self, index: QModelIndex) -> str:
         """Provide a formatted view of the most recent commits."""
@@ -499,14 +502,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _row_selection_shading(self):
         """Change selection colour when selection changes."""
         index = self.tableView.selectionModel().currentIndex()
+        c = self.model.row_shading_colour(index)
+        colour = f"{c.red()}, {c.green()}, {c.blue()}, {c.alphaF():.2f}"
         self.tableView.setStyleSheet("QTableView::item:selected {"
                                      "border-width: 4px 0 4px 0;"
                                      "border-style: solid;"
                                      "border-color: black;}"
                                      "QTableView {"
                                      "selection-color: black;"
-                                     "selection-background-color:"
-                                     f" {self.model.row_shading(index)};}}")
+                                     "selection-background-color: rgba("
+                                     f"{colour});}}")
 
     def _display_commit_text(self) -> None:
         """Get and display the commit text in lower pane."""
