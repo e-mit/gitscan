@@ -8,7 +8,7 @@ import multiprocessing.synchronize
 
 import arrow
 
-from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox
+from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox, QWidget
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
 from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
@@ -97,13 +97,11 @@ class StyleDelegate(QStyledItemDelegate):
 class TableModel(QAbstractTableModel):
     """The model part of Qt model-view, for containing data."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.repo_data = []
-
-    def load_and_refresh_saved_data(self):
+    def __init__(self, parent: QWidget | None):
+        super().__init__()
+        self.repo_data: list[dict[str, Any]] = []
         self.settings = settings.AppSettings()
-        self.refresh_all_data()
+        self.parentWidget = parent
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
@@ -311,7 +309,7 @@ class TableModel(QAbstractTableModel):
         """Re-read all listed repos and store the data."""
         self.cd = CancellableDialog(ReadWorker(self.settings.repo_list,
                                                self.settings.fetch_remotes),
-                                    self._refresh_complete)
+                                    self._refresh_complete, self.parentWidget)
         self.cd.launch("Updating", "Repo update in progress...")
 
     def refresh_row(self, index: QModelIndex) -> None:
@@ -446,13 +444,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.setWindowTitle(APP_TITLE + ":  " + APP_SUBTITLE)
         self._set_default_commit_text_format()
-        self.model = TableModel()
+        self.model = TableModel(self)
         self.tableView.setModel(self.model)
         self._connect_signals()
         self.tableView.setItemDelegate(StyleDelegate(self.model,
                                                      self.tableView))
-        self.model.load_and_refresh_saved_data()
+
+    def show(self) -> None:
+        super().show()
+        if self.model.settings.first_run:
+            self._show_welcome_message()
+            self._run_search_dialog()
+        self.model.refresh_all_data()
         self._format_table()
+
+    def _show_welcome_message(self) -> None:
+        self.box = QMessageBox(QMessageBox.Icon.NoIcon, APP_TITLE,
+                               "Welcome!", QMessageBox.StandardButton.Ok,
+                               parent=self)
+        self.box.rejected.connect(self.box.close)  # type: ignore
+        self.box.finished.connect(self.box.deleteLater)
+        self.box.exec()
 
     def _format_table(self) -> None:
         self.tableView.setShowGrid(False)
@@ -559,7 +571,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _run_search_dialog(self) -> None:
         """Dialog for repository search."""
         (search_path_str, ok) = QInputDialog.getText(
-            self, "Search for repositories",
+            self, "Search for local repositories",
             ("Choose the root directory. All directories\n"
              "below this will be searched (this may be slow)."),
             QLineEdit.EchoMode.Normal, self.model.settings.search_path,
@@ -578,7 +590,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cd = CancellableDialog(
                     SearchWorker(search_path,
                                  self.model.settings.exclude_dirs),
-                    self._search_complete)
+                    self._search_complete, self)
         self.cd.launch("Search", "Search in progress...")
 
     def _run_settings_dialog(self) -> None:
@@ -595,7 +607,7 @@ class CancellableDialog:
     """Show a dialog while doing a long task, allowing early cancellation."""
 
     def __init__(self, worker: CancellableTaskWorker,
-                 on_worker_finish: PYQT_SLOT) -> None:
+                 on_worker_finish: PYQT_SLOT, parent: QWidget | None) -> None:
         """Supply the worker object and a function to execute when done."""
         self.thread = QThread()
         self.worker = worker
@@ -607,6 +619,7 @@ class CancellableDialog:
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker.finished.connect(on_worker_finish)
         self.cancelled = False
+        self.parent = parent
 
     def _cancel(self) -> None:
         self.cancelled = True
@@ -617,7 +630,8 @@ class CancellableDialog:
         """Start the task and show the wait dialog box."""
         self.thread.start()
         self.box = QMessageBox(QMessageBox.Icon.NoIcon, title,
-                               text, QMessageBox.StandardButton.Cancel)
+                               text, QMessageBox.StandardButton.Cancel,
+                               parent=self.parent)
         self.box.rejected.connect(self._cancel)
         self.worker.finished.connect(self.box.close)  # type: ignore
         self.worker.finished.connect(QApplication.restoreOverrideCursor)

@@ -112,6 +112,7 @@ class AppSettings:
         self._create_default_settings()
         (preferences,
          list_path_to_git) = load_settings(self.settings_directory)
+        self.first_run = preferences is None and list_path_to_git is None
         self._validate_and_set_paths(list_path_to_git)
         self._validate_and_set_preferences(preferences)
 
