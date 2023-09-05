@@ -155,7 +155,7 @@ def read_repo(path_to_git: str | Path,
         info['branch_count'] = len(repo.branches)  # type: ignore
         info['branch_names'] = [x.name for x in repo.branches]  # type: ignore
         info['tag_count'] = len(repo.tags)
-        info['submodule_count'] = len(repo.submodules)
+        info['submodule_names'] = [x.name for x in repo.submodules]
         info['index_changes'] = repo.is_dirty(index=True,
                                               working_tree=False,
                                               untracked_files=False,

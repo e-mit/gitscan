@@ -185,11 +185,12 @@ class TableModel(QAbstractTableModel):
                 tooltip = (str(tag_count) + " tag"
                            + self._add_s_if_plural(tag_count))
         elif (index.column() == 10):
-            submodule_count = self.repo_data[index.row()]['submodule_count']
+            submodule_count = len(self.repo_data[index.row()]['submodule_names'])
             if submodule_count > 0:
                 data = str(submodule_count)
                 tooltip = (str(submodule_count) + " submodule"
-                           + self._add_s_if_plural(submodule_count))
+                           + self._add_s_if_plural(submodule_count) + ": "
+                    + ", ".join(self.repo_data[index.row()]['submodule_names']))
         elif (index.column() == 11):
             remote_count = self.repo_data[index.row()]['remote_count']
             if remote_count > 0:

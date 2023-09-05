@@ -74,7 +74,7 @@ class TestReadRepo(unittest.TestCase):
             'ahead_count': 0,
             'behind_count': 0,
             'fetch_status': None,
-            'submodule_count': 0
+            'submodule_names': []
             }
 
     def tearDown(self) -> None:
