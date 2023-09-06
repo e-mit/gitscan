@@ -29,9 +29,9 @@
       "label": "Run",
       "type": "shell",
       "command": "${command:python.interpreterPath}",
-      "args": ["gitscan.py"],
+      "args": ["gitscan"],
       "problemMatcher": [],
-      "options": {"cwd": "${workspaceFolder}/gitscan/"},
+      "options": {"cwd": "${workspaceFolder}/.."},
       "presentation": {
         "revealProblems": "onProblem",
         "close": true

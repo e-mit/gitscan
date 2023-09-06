@@ -5,6 +5,7 @@ from pathlib import Path
 import threading
 import multiprocessing
 import multiprocessing.synchronize
+import pkgutil
 
 import arrow
 
@@ -15,12 +16,12 @@ from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
 from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel
 from PyQt6.QtCore import QUrl, pyqtSignal, QObject, QThread, pyqtBoundSignal
 from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPainter
-from PyQt6.QtGui import QPen, QTextCursor
+from PyQt6.QtGui import QPen, QTextCursor, QPixmap
 
-from gui.test_table import Ui_MainWindow
-from gui.settings_dialog import Ui_Dialog
-from scanner import search, read, settings
-from scanner.settings import AppSettings
+from .gui.test_table import Ui_MainWindow
+from .gui.settings_dialog import Ui_Dialog
+from .scanner import search, read, settings
+from .scanner.settings import AppSettings
 
 PYQT_SLOT = Union[Callable[..., None], pyqtBoundSignal]
 EVENT_TYPE = Union[threading.Event, multiprocessing.synchronize.Event]
@@ -54,28 +55,40 @@ class StyleDelegate(QStyledItemDelegate):
 
     def __init__(self, model, *args, **kwargs):
         self.model = model
+        self.folder_icon = self._load_icon_from_resource(OPEN_FOLDER_ICON)
+        self.difftool_icon = self._load_icon_from_resource(OPEN_DIFFTOOL_ICON)
+        self.terminal_icon = self._load_icon_from_resource(OPEN_TERMINAL_ICON)
+        self.ide_icon = self._load_icon_from_resource(OPEN_IDE_ICON)
+        self.warn_icon = self._load_icon_from_resource(WARNING_ICON)
+        self.refresh_icon = self._load_icon_from_resource(REFRESH_ICON)
         super().__init__(*args, **kwargs)
+
+    def _load_icon_from_resource(self, resource_file: str) -> QIcon:
+        pix_map = QPixmap()
+        pix_map.loadFromData(
+            pkgutil.get_data(__name__, resource_file))  # type: ignore
+        return QIcon(pix_map)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem,
               index: QModelIndex) -> None:
         super().paint(painter, option, index)
         icon = None
         if (index.column() == OPEN_FOLDER_COLUMN):
-            icon = QIcon(OPEN_FOLDER_ICON)
+            icon = self.folder_icon
         elif (index.column() == OPEN_DIFFTOOL_COLUMN):
             if ((not self.model.repo_data[index.row()]['bare']) and
                 (self.model.repo_data[index.row()]['working_tree_changes'] or
                  self.model.repo_data[index.row()]['commit_count'] > 1)):
-                icon = QIcon(OPEN_DIFFTOOL_ICON)
+                icon = self.difftool_icon
         elif (index.column() == OPEN_TERMINAL_COLUMN):
-            icon = QIcon(OPEN_TERMINAL_ICON)
+            icon = self.terminal_icon
         elif (index.column() == OPEN_IDE_COLUMN):
-            icon = QIcon(OPEN_IDE_ICON)
+            icon = self.ide_icon
         elif (index.column() == REFRESH_COLUMN):
-            icon = QIcon(REFRESH_ICON)
+            icon = self.refresh_icon
         elif (index.column() == WARNING_COLUMN):
             if self.model.repo_data[index.row()]['warning'] is not None:
-                icon = QIcon(WARNING_ICON)
+                icon = self.warn_icon
 
         if icon is not None:
             size = option.rect.size()
@@ -672,8 +685,13 @@ class SettingsWindow(QDialog, Ui_Dialog):
         return 1 if self.exec_ok else 0
 
 
-if __name__ == "__main__":
+def main():
+    """Application entry point."""
     app = QApplication(sys.argv)
     win = MainWindow()
     win.show()
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
