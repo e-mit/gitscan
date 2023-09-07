@@ -7,6 +7,7 @@ import multiprocessing
 import multiprocessing.synchronize
 import pkgutil
 import subprocess
+import logging
 
 import arrow
 
@@ -721,6 +722,8 @@ class SettingsWindow(QDialog, Ui_Dialog):
 
 def main():
     """Application entry point."""
+    logging.basicConfig(format="%(message)s", level=logging.INFO,
+                        datefmt="%H:%M:%S")
     app = QApplication(sys.argv)
     win = MainWindow()
     win.show()

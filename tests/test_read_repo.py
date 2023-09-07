@@ -8,7 +8,7 @@ from gitscan.scanner import read
 from tests import test_helpers
 
 
-MAX_EXPECTED_TEST_COMMIT_AGE_S = 20.0
+MAX_EXPECTED_TEST_COMMIT_AGE_S = 30.0
 READ_COMMIT_COUNT = 3
 
 

@@ -3,11 +3,11 @@ from pathlib import Path
 from typing import Any, Sequence
 import subprocess
 import time
-import os
 import multiprocessing as mp
 import multiprocessing.synchronize
 from functools import partial
 from enum import Flag, auto
+import logging
 
 import psutil
 from git import Repo  # type: ignore
@@ -26,6 +26,7 @@ class FetchStatus(Flag):
 
     TIMEOUT = auto()
     ERROR = auto()
+    CANCEL = auto()
     OK = auto()
 
 
@@ -44,7 +45,7 @@ def read_repo_parallel(paths_to_git: Sequence[Path | str],
                        pool_size: int | None = None,
                        poll_period_s: float = 0.2,
                        timeout_A_count: int = 50,
-                       timeout_B_count: int = 5
+                       timeout_B_count: int = 6
                        ) -> list[None | dict[str, Any]]:
     """Run multiple repo readers from a process pool.
 
@@ -65,33 +66,34 @@ def git_fetch_with_timeout(git_directory: Path | str,
                            stop_event: MP_EVENT | None = None,
                            poll_period_s: float = 0.2,
                            timeout_A_count: int = 50,
-                           timeout_B_count: int = 5
+                           timeout_B_count: int = 6
                            ) -> FetchStatus:
     """Run git fetch in a subprocess and kill it if necessary.
 
     Returns a string description of the problem, or None if success.
     """
-    parent = psutil.Process(os.getpid())
     args = (['git', 'fetch'] if remote_name is None
             else ['git', 'fetch', remote_name])
-    process = subprocess.Popen(args,  # nosec
-                               bufsize=0, close_fds=True,
-                               cwd=git_directory,
-                               stdout=subprocess.DEVNULL,
-                               stderr=subprocess.DEVNULL,
-                               text=False)
+    proc = subprocess.Popen(args,  # nosec
+                            bufsize=0, close_fds=True,
+                            cwd=git_directory,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            text=False)
+    the_process = psutil.Process(proc.pid)
     count_A = 0
     count_B = 0
     timeout = False
     stop = False
-    while process.poll() is None:
-        children = parent.children(recursive=True)
-        if any([child.status() != 'sleeping' for child in children]):
+    while proc.poll() is None:
+        processes = the_process.children(recursive=True)
+        processes.append(the_process)
+        if any([x.status() != 'sleeping' for x in processes]):
             count_B = 0
         else:
             count_B += 1
         count_A += 1
-        if count_A >= timeout_A_count or count_B >= timeout_B_count:
+        if count_B >= timeout_B_count or count_A >= timeout_A_count:
             timeout = True
             break
         if (stop_event is not None) and stop_event.is_set():
@@ -100,15 +102,19 @@ def git_fetch_with_timeout(git_directory: Path | str,
         time.sleep(poll_period_s)
 
     if timeout or stop:
-        children = parent.children(recursive=True)
-        for child in children:
-            child.kill()
+        processes = the_process.children(recursive=True)
+        processes.append(the_process)
+        for p in processes:
+            p.kill()
         # Wait for the process to end: this is
         # needed to avoid a ResourceWarning
-        process.wait(timeout_A_count*poll_period_s)
-        return FetchStatus.TIMEOUT
+        proc.wait(timeout_A_count*poll_period_s)
+        if stop:
+            return FetchStatus.CANCEL
+        else:
+            return FetchStatus.TIMEOUT
     else:
-        if process.returncode != 0:
+        if proc.returncode != 0:
             return FetchStatus.ERROR
         return FetchStatus.OK
 
@@ -137,7 +143,7 @@ def read_repo(path_to_git: str | Path,
               fetch_remotes: bool = True,
               poll_period_s: float = 0.2,
               timeout_A_count: int = 50,
-              timeout_B_count: int = 5
+              timeout_B_count: int = 6
               ) -> None | dict[str, Any]:
     """Extract basic information about the repo.
 
@@ -209,6 +215,7 @@ def read_repo(path_to_git: str | Path,
                     if (stop_event_global is not None and
                             stop_event_global.is_set()):
                         return None
+                    start = time.time()
                     status = git_fetch_with_timeout(
                                                 info['repo_dir'],
                                                 remote.name,
@@ -216,6 +223,10 @@ def read_repo(path_to_git: str | Path,
                                                 poll_period_s,
                                                 timeout_A_count,
                                                 timeout_B_count)
+                    elapsed = time.time() - start
+                    logging.info("\nRepo: %s|%s : %s : %.2f",
+                                 info['repo_dir'],
+                                 remote.name, status.name, elapsed)
                     if info['fetch_status'] is None:
                         info['fetch_status'] = status
                     else:
