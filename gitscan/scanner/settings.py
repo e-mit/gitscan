@@ -32,8 +32,7 @@ def get_settings_directory() -> Path:
 
     Directory is platform-dependent. Create it if it does not exist.
     """
-    platform = get_platform()
-    if platform == Platform.WINDOWS:
+    if get_platform() == Platform.WINDOWS:
         settings_dir = (Path(os.environ['APPDATA'])
                         / APP_SETTINGS_DIRECTORY_NAME)
     else:  # if platform == Platform.LINUX:
@@ -89,6 +88,8 @@ def save_preferences(settings_dir: Path | str,
     with open(Path(settings_dir) / PREFERENCES_FILENAME,
               'w', encoding="utf-8") as file:
         json.dump(preferences, file)
+        file.flush()
+        os.fsync(file.fileno())
 
 
 def save_repo_list(settings_dir: Path | str,
@@ -98,6 +99,8 @@ def save_repo_list(settings_dir: Path | str,
               'w', encoding="utf-8") as file:
         for line in list_path_to_git:
             file.write(f"{line}\n")
+        file.flush()
+        os.fsync(file.fileno())
 
 
 class AppSettings:
@@ -149,16 +152,17 @@ class AppSettings:
 
     def _create_default_settings(self) -> None:
         self.exclude_dirs: list[Path] = []
-        self.ide_command = ["code", "-n"]
-        self.search_path = os.environ['HOME']
+        self.ide_command = "code"  # MSVSC
         self.fetch_remotes = True
         if get_platform() == Platform.LINUX:
+            self.search_path = os.environ['HOME']
             self.terminal_command = "gnome-terminal"
             trash_path = Path(os.environ['HOME']) / '.local/share/Trash'
             if trash_path.is_dir():
                 self.exclude_dirs = [trash_path]
         else:  # Windows
-            self.terminal_command = "cmd.exe"
+            self.search_path = os.environ['USERPROFILE']
+            self.terminal_command = "start cmd.exe"
 
     def set_search_path(self, search_path: str) -> None:
         """Change only the search path, and save preferences to file."""

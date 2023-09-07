@@ -6,6 +6,7 @@ import threading
 import multiprocessing
 import multiprocessing.synchronize
 import pkgutil
+import subprocess
 
 import arrow
 
@@ -13,7 +14,7 @@ from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox, QWidget
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
 from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
-from PyQt6.QtCore import Qt, QModelIndex, QProcess, QAbstractTableModel
+from PyQt6.QtCore import Qt, QModelIndex, QAbstractTableModel
 from PyQt6.QtCore import QUrl, pyqtSignal, QObject, QThread, pyqtBoundSignal
 from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPainter
 from PyQt6.QtGui import QPen, QTextCursor, QPixmap
@@ -343,34 +344,27 @@ class TableModel(QAbstractTableModel):
         """Launch processes when certain columns are clicked."""
         if index.column() == OPEN_FOLDER_COLUMN:
             QDesktopServices.openUrl(
-                QUrl("file://"
-                     + str(self.repo_data[index.row()]['repo_dir'])))
+                QUrl(Path(self.repo_data[index.row()]['repo_dir']).as_uri()))
         elif index.column() == OPEN_DIFFTOOL_COLUMN:
             git_args = None
             if self.repo_data[index.row()]['bare']:
                 pass  # TODO: diff using last 2 commit hashes
             elif self.repo_data[index.row()]['working_tree_changes']:
-                git_args = ["difftool", "--dir-diff"]
+                git_args = ["git", "difftool", "--dir-diff"]
             elif (self.repo_data[index.row()]['commit_count'] > 1):
-                git_args = ["difftool", "--dir-diff", "HEAD~1..HEAD"]
+                git_args = ["git", "difftool", "--dir-diff", "HEAD~1..HEAD"]
             if git_args is not None:
-                myProcess = QProcess()
-                myProcess.setWorkingDirectory(
-                    str(self.repo_data[index.row()]['repo_dir']))
-                myProcess.start("git", git_args)
-                myProcess.waitForFinished(-1)
+                subprocess.Popen(git_args,  # nosec
+                                 cwd=str(
+                                     self.repo_data[index.row()]['repo_dir']))
         elif index.column() == OPEN_TERMINAL_COLUMN:
-            myProcess = QProcess()
-            myProcess.setWorkingDirectory(
-                str(self.repo_data[index.row()]['repo_dir']))
-            myProcess.start(self.settings.terminal_command)
-            myProcess.waitForFinished(-1)
+            subprocess.Popen(self.settings.terminal_command,  # nosec
+                             shell=True,
+                             cwd=str(self.repo_data[index.row()]['repo_dir']))
         elif index.column() == OPEN_IDE_COLUMN:
-            myProcess = QProcess()
-            ide_args = self.settings.ide_command[1:]
-            ide_args.append(str(self.repo_data[index.row()]['repo_dir']))
-            myProcess.start(self.settings.ide_command[0], ide_args)
-            myProcess.waitForFinished(-1)
+            cmd = self.settings.ide_command + " ."
+            subprocess.Popen(cmd, shell=True,  # nosec
+                             cwd=str(self.repo_data[index.row()]['repo_dir']))
         elif index.column() == REFRESH_COLUMN:
             self.refresh_row(index)
 
@@ -664,7 +658,7 @@ class SettingsWindow(QDialog, Ui_Dialog):
     def _set_existing_settings(self, existing_settings: AppSettings) -> None:
         """Set existing/default app settings in user input widgets."""
         self.checkBox_fetches.setChecked(existing_settings.fetch_remotes)
-        self.lineEdit_IDE.setText(" ".join(existing_settings.ide_command))
+        self.lineEdit_IDE.setText(existing_settings.ide_command)
         self.lineEdit_terminal.setText(existing_settings.terminal_command)
         self.label_settings_location.setText(
             "Application settings will be saved in\n"
@@ -674,8 +668,8 @@ class SettingsWindow(QDialog, Ui_Dialog):
         """Get app settings from user input widgets."""
         new_settings = {}
         if (self.exec_ok):
-            new_settings['ide_command'] = self.lineEdit_IDE.text().strip().split(" ")
-            new_settings['terminal_command'] = self.lineEdit_terminal.text()
+            new_settings['ide_command'] = self.lineEdit_IDE.text().strip()
+            new_settings['terminal_command'] = self.lineEdit_terminal.text().strip()
             new_settings['fetch_remotes'] = self.checkBox_fetches.isChecked()
         return (self.exec_ok, new_settings)
 
