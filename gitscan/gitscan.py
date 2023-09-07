@@ -72,7 +72,10 @@ class StyleDelegate(QStyledItemDelegate):
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem,
               index: QModelIndex) -> None:
+        """Override default delegate paint method."""
         super().paint(painter, option, index)
+        if not self.model.repo_data:
+            return
         icon = None
         if (index.column() == OPEN_FOLDER_COLUMN):
             icon = self.folder_icon
@@ -119,7 +122,9 @@ class TableModel(QAbstractTableModel):
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
-        if role == Qt.ItemDataRole.DisplayRole:
+        if not self.repo_data:
+            return
+        elif role == Qt.ItemDataRole.DisplayRole:
             return self._display_data(index, Qt.ItemDataRole.DisplayRole)
         elif role == Qt.ItemDataRole.ToolTipRole:
             return self._display_data(index, Qt.ItemDataRole.ToolTipRole)
@@ -394,16 +399,24 @@ class TableModel(QAbstractTableModel):
 
 
 class CancellableTaskWorker(QObject):
+    """An object which will run a task on a QThread and can be stopped."""
+
     finished = pyqtSignal(list)
+    stop_event: EVENT_TYPE
 
     def run(self) -> None:
+        """Run the task and emit finished signal when done."""
         raise NotImplementedError
 
     def get_stop_event(self) -> EVENT_TYPE:
-        raise NotImplementedError
+        """Provide the Event used to stop the task early."""
+        return self.stop_event
 
 
 class SearchWorker(CancellableTaskWorker):
+    """Search for repos; will run on a QThread and can be stopped."""
+
+    stop_event: threading.Event
 
     def __init__(self,
                  start_dir: str | Path,
@@ -413,10 +426,8 @@ class SearchWorker(CancellableTaskWorker):
         self.stop_event = threading.Event()
         super().__init__()
 
-    def get_stop_event(self) -> EVENT_TYPE:
-        return self.stop_event
-
     def run(self) -> None:
+        """Run the task and emit finished signal when done."""
         list_path_to_git = search.find_git_repos(self.start_dir,
                                                  self.exclude_dirs,
                                                  self.stop_event)
@@ -424,6 +435,9 @@ class SearchWorker(CancellableTaskWorker):
 
 
 class ReadWorker(CancellableTaskWorker):
+    """Read repo data; will run on a QThread and can be stopped."""
+
+    stop_event: multiprocessing.synchronize.Event
 
     def __init__(self,
                  repo_list: list[str],
@@ -433,10 +447,8 @@ class ReadWorker(CancellableTaskWorker):
         self.stop_event = multiprocessing.Event()
         super().__init__()
 
-    def get_stop_event(self) -> EVENT_TYPE:
-        return self.stop_event
-
     def run(self) -> None:
+        """Run the task and emit finished signal when done."""
         results = read.read_repo_parallel(self.repo_list,
                                           self.fetch_remotes,
                                           self.stop_event)
@@ -458,6 +470,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                                      self.tableView))
 
     def show(self) -> None:
+        """Show the main window; this is non-blocking."""
         super().show()
         if self.model.settings.first_run:
             self._show_welcome_message()
@@ -576,7 +589,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
     def _run_search_dialog(self) -> None:
-        """Dialog for repository search."""
+        """Dialog to get user choice of root directory for repo search."""
         (search_path_str, ok) = QInputDialog.getText(
             self, "Search for local repositories",
             ("Choose the root directory. All directories\n"
@@ -590,10 +603,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _search_complete(self, repo_list):
         if not self.cd.cancelled:
+            self.model.repo_data = []
             self.model.settings.set_repo_list(repo_list)
             self.model.refresh_all_data()
 
     def launch_search(self, search_path: str):
+        """Show a dialog while doing repo search, allowing cancellation."""
         self.cd = CancellableDialog(
                     SearchWorker(search_path,
                                  self.model.settings.exclude_dirs),

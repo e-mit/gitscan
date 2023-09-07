@@ -13,6 +13,7 @@ REPO_LIST_FILENAME = "repo_list.txt"
 
 class Platform(Enum):
     """Supported OS/platforms."""
+
     LINUX = auto()
     WINDOWS = auto()
 

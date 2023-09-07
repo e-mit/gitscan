@@ -23,6 +23,7 @@ FETCH_TIMEOUT_WARNING = "Fetch timed-out"
 
 class FetchStatus(Flag):
     """Represents the result of an attempt to fetch a single remote."""
+
     TIMEOUT = auto()
     ERROR = auto()
     OK = auto()
@@ -32,6 +33,7 @@ stop_event_global = None
 
 
 def init_pool_stop_event(evt: MP_EVENT | None):
+    """Initialize the global event object which is read in read_repo()."""
     global stop_event_global
     stop_event_global = evt
 
@@ -72,8 +74,8 @@ def git_fetch_with_timeout(git_directory: Path | str,
     parent = psutil.Process(os.getpid())
     args = (['git', 'fetch'] if remote_name is None
             else ['git', 'fetch', remote_name])
-    process = subprocess.Popen(args,
-                               shell=False, bufsize=0, close_fds=True,
+    process = subprocess.Popen(args,  # nosec
+                               bufsize=0, close_fds=True,
                                cwd=git_directory,
                                stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL,
@@ -205,7 +207,7 @@ def read_repo(path_to_git: str | Path,
             if fetch_remotes:
                 for remote in repo.remotes:
                     if (stop_event_global is not None and
-                        stop_event_global.is_set()):
+                            stop_event_global.is_set()):
                         return None
                     status = git_fetch_with_timeout(
                                                 info['repo_dir'],
