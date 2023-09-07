@@ -113,12 +113,14 @@ class TestReadRepo(unittest.TestCase):
 
     def test_read_commits(self) -> None:
         commits = read.read_commits(self.path_to_git, READ_COMMIT_COUNT)
-        expected_commit_count = min([READ_COMMIT_COUNT,
-                                     self.total_commits])
-        self.assertEqual(expected_commit_count, len(commits))
-        for i in range(len(commits)):
-            with self.subTest(i=i):
-                self.assertNotIn("\n", commits[i]['summary'])
+        self.assertIsNotNone(commits)
+        if commits is not None:
+            expected_commit_count = min([READ_COMMIT_COUNT,
+                                        self.total_commits])
+            self.assertEqual(expected_commit_count, len(commits))
+            for i in range(len(commits)):
+                with self.subTest(i=i):
+                    self.assertNotIn("\n", commits[i]['summary'])
 
 
 class TestReadRepoStash(TestReadRepo):

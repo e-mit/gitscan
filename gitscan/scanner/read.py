@@ -247,12 +247,15 @@ def read_repo(path_to_git: str | Path,
 
 
 def read_commits(path_to_git: str | Path,
-                 commit_count: int) -> list[dict[str, str]]:
+                 commit_count: int) -> list[dict[str, str]] | None:
     """Get the most recent commit information from the repo active branch.
 
     Return up to 'commit_count' commits, or fewer if not available.
     """
-    repo = Repo(path_to_git)
+    try:
+        repo = Repo(path_to_git)
+    except Exception:
+        return None
     commits: list[dict[str, str]] = []
     try:
         iter_commits = repo.iter_commits()

@@ -49,6 +49,7 @@ ICON_SCALE_FACTOR = 0.7
 ROW_SCALE_FACTOR = 1.5
 COLUMN_SCALE_FACTOR = 1.1
 ROW_SHADING_ALPHA = 100
+BAD_REPO_FLAG = 'bad_repo_flag'
 
 
 class StyleDelegate(QStyledItemDelegate):
@@ -72,9 +73,13 @@ class StyleDelegate(QStyledItemDelegate):
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem,
               index: QModelIndex) -> None:
-        """Override default delegate paint method."""
+        """Override default delegate paint method for icons and border."""
         super().paint(painter, option, index)
         if not self.model.repo_data:
+            return
+        if ((BAD_REPO_FLAG in self.model.repo_data[index.row()])
+                and (index.column() != WARNING_COLUMN)
+                and (index.column() != REFRESH_COLUMN)):
             return
         icon = None
         if (index.column() == OPEN_FOLDER_COLUMN):
@@ -119,6 +124,8 @@ class TableModel(QAbstractTableModel):
         self.repo_data: list[dict[str, Any]] = []
         self.settings = settings.AppSettings()
         self.parentWidget = parent
+        self.bad_data_entry = {BAD_REPO_FLAG: True,
+                               'warning': "Could not load repository"}
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
@@ -154,6 +161,10 @@ class TableModel(QAbstractTableModel):
 
     def _display_data(self, index: QModelIndex,
                       role: Qt.ItemDataRole) -> str:
+        if (BAD_REPO_FLAG in self.repo_data[index.row()]
+            and (index.column() not in
+                 [0, 1, REFRESH_COLUMN, WARNING_COLUMN])):
+            return ""
         data = " "
         tooltip = ""
         if (index.column() == 0):
@@ -279,7 +290,9 @@ class TableModel(QAbstractTableModel):
         """Get row colour for the repo list to indicate status."""
         if not self.valid_index(index):
             return QColor()
-        if ((self.repo_data[index.row()]['untracked_count'] > 0)
+        if BAD_REPO_FLAG in self.repo_data[index.row()]:
+            return QColor(0, 0, 0, ROW_SHADING_ALPHA)
+        elif ((self.repo_data[index.row()]['untracked_count'] > 0)
                 or self.repo_data[index.row()]['working_tree_changes']
                 or self.repo_data[index.row()]['index_changes']):
             return QColor(255, 0, 0, ROW_SHADING_ALPHA)
@@ -294,10 +307,13 @@ class TableModel(QAbstractTableModel):
 
     def get_commit_html(self, index: QModelIndex) -> str:
         """Provide a formatted view of the most recent commits."""
-        if not self.valid_index(index):
+        if ((not self.valid_index(index))
+           or (BAD_REPO_FLAG in self.repo_data[index.row()])):
             return ""
         commit_data = read.read_commits(self.settings.repo_list[index.row()],
                                         VIEW_COMMIT_COUNT)
+        if commit_data is None:
+            return ""
         summary = "" if commit_data else "No commits"
         for c in commit_data:
             summary += (
@@ -314,13 +330,15 @@ class TableModel(QAbstractTableModel):
     def _refresh_complete(self, results):
         if not self.cd.cancelled:
             repo_data = []
-            retained_paths = []
             for i, data in enumerate(results):
-                if data is not None:
+                if data is None:
+                    d = dict(self.bad_data_entry)
+                    (d['name'], _,
+                     d['containing_dir']) = read.extract_repo_name(
+                         self.settings.repo_list[i])
+                    repo_data.append(d)
+                else:
                     repo_data.append(data)
-                    retained_paths.append(self.settings.repo_list[i])
-            if (len(retained_paths) != len(self.settings.repo_list)):
-                self.settings.set_repo_list(retained_paths)
             self.repo_data = repo_data
             self.layoutChanged.emit()
 
@@ -339,7 +357,11 @@ class TableModel(QAbstractTableModel):
         if data is not None:
             self.repo_data[index.row()] = data
         else:
-            pass  # TODO
+            d = dict(self.bad_data_entry)
+            (d['name'], _,
+             d['containing_dir']) = read.extract_repo_name(
+                    self.settings.repo_list[index.row()])
+            self.repo_data[index.row()] = d
         self.dataChanged.emit(self.createIndex(index.row(), 0),
                               self.createIndex(index.row(),
                                                TOTAL_COLUMNS - 1))
@@ -347,6 +369,9 @@ class TableModel(QAbstractTableModel):
 
     def table_clicked(self, index: QModelIndex):
         """Launch processes when certain columns are clicked."""
+        if ((BAD_REPO_FLAG in self.repo_data[index.row()])
+           and (index.column() != REFRESH_COLUMN)):
+            return
         if index.column() == OPEN_FOLDER_COLUMN:
             QDesktopServices.openUrl(
                 QUrl(Path(self.repo_data[index.row()]['repo_dir']).as_uri()))
