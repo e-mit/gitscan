@@ -45,9 +45,9 @@ def read_repo_parallel(paths_to_git: Sequence[Path | str],
                        fetch_remotes: bool = True,
                        stop_event: MP_EVENT | None = None,
                        pool_size: int | None = None,
-                       poll_period_s: float = 0.2,
-                       timeout_A_count: int = 50,
-                       timeout_B_count: int = 6
+                       poll_period_s: float = 0.1,
+                       timeout_A_count: int = 100,
+                       timeout_B_count: int = 12
                        ) -> list[None | dict[str, Any]]:
     """Run multiple repo readers from a process pool.
 
@@ -66,9 +66,9 @@ def read_repo_parallel(paths_to_git: Sequence[Path | str],
 def git_fetch_with_timeout(git_directory: Path | str,
                            remote_name: str | None = None,
                            stop_event: MP_EVENT | None = None,
-                           poll_period_s: float = 0.2,
-                           timeout_A_count: int = 50,
-                           timeout_B_count: int = 6
+                           poll_period_s: float = 0.1,
+                           timeout_A_count: int = 100,
+                           timeout_B_count: int = 12
                            ) -> FetchStatus:
     """Run git fetch in a subprocess and kill it if necessary.
 
@@ -90,7 +90,8 @@ def git_fetch_with_timeout(git_directory: Path | str,
     while proc.poll() is None:
         processes = the_process.children(recursive=True)
         processes.append(the_process)
-        if any([x.status() != 'sleeping' for x in processes]):
+        if any([x.status() in [psutil.STATUS_IDLE, psutil.STATUS_RUNNING]
+                for x in processes]):
             count_B = 0
         else:
             count_B += 1
@@ -143,9 +144,9 @@ def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path, Path]:
 
 def read_repo(path_to_git: str | Path,
               fetch_remotes: bool = True,
-              poll_period_s: float = 0.2,
-              timeout_A_count: int = 50,
-              timeout_B_count: int = 6
+              poll_period_s: float = 0.1,
+              timeout_A_count: int = 100,
+              timeout_B_count: int = 12
               ) -> None | dict[str, Any]:
     """Extract basic information about the repo.
 
