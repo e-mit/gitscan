@@ -5,10 +5,13 @@ from pathlib import Path
 from typing import Any
 import json
 from enum import Enum, auto
+import logging
 
 APP_SETTINGS_DIRECTORY_NAME = "gitscan"
 PREFERENCES_FILENAME = "preferences.json"
 REPO_LIST_FILENAME = "repo_list.txt"
+
+logger = logging.getLogger(__name__)
 
 
 class Platform(Enum):

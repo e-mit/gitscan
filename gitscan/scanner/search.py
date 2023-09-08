@@ -2,6 +2,9 @@
 import os
 from pathlib import Path
 from threading import Event
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def find_git_repos(start_dir: str | Path,

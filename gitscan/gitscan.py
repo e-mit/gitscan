@@ -54,7 +54,8 @@ COLUMN_SCALE_FACTOR = 1.1
 ROW_SHADING_ALPHA = 100
 BAD_REPO_FLAG = 'bad_repo_flag'
 GRIDLINE_COLOUR = QColor(100, 100, 100, 100)
-VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'INFO']
+
+logger = None
 
 
 class StyleDelegate(QStyledItemDelegate):
@@ -731,14 +732,26 @@ class SettingsWindow(QDialog, Ui_Dialog):
         return 1 if self.exec_ok else 0
 
 
+def setup_logging(log_level: str):
+    """Format the modular logger."""
+    global logger
+    if log_level not in logging._nameToLevel.keys():
+        raise ValueError(f"'{log_level}' is not a valid log level. "
+                         "Use one of: "
+                         + ', '.join(logging._nameToLevel.keys()))
+    logger = logging.getLogger(__package__)
+    logger.setLevel(log_level)
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(("%(asctime)s %(levelname)s : "
+                                   "line %(lineno)d in %(module)s : "
+                                   "%(message)s"), datefmt='%H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
 def main(log_level: str) -> None:
     """Application entry point."""
-    if log_level not in VALID_LOG_LEVELS:
-        raise ValueError(f"'{log_level}' is not a valid log level. "
-                         f"Use one of: {', '.join(VALID_LOG_LEVELS)}")
-    logging.basicConfig(format="%(message)s", level=log_level,
-                        datefmt="%H:%M:%S",
-                        handlers=[logging.StreamHandler(sys.stdout)])
+    setup_logging(log_level)
     app = QApplication(sys.argv)
     win = MainWindow()
     win.show()

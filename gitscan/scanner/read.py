@@ -20,6 +20,8 @@ UNFETCHED_REMOTE_WARNING = "Remotes not fetched"
 FETCH_FAILED_WARNING = "Fetch failed"
 FETCH_TIMEOUT_WARNING = "Fetch timed-out"
 
+logger = logging.getLogger(__name__)
+
 
 class FetchStatus(Flag):
     """Represents the result of an attempt to fetch a single remote."""
@@ -224,9 +226,9 @@ def read_repo(path_to_git: str | Path,
                                                 timeout_A_count,
                                                 timeout_B_count)
                     elapsed = time.time() - start
-                    logging.info("Repo: %s|%s : %s : %.2f",
-                                 info['repo_dir'],
-                                 remote.name, status.name, elapsed)
+                    logger.info("%s|%s : %s %.2f",
+                                info['repo_dir'],
+                                remote.name, status.name, elapsed)
                     if info['fetch_status'] is None:
                         info['fetch_status'] = status
                     else:
