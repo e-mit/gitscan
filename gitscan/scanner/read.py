@@ -224,7 +224,7 @@ def read_repo(path_to_git: str | Path,
                                                 timeout_A_count,
                                                 timeout_B_count)
                     elapsed = time.time() - start
-                    logging.info("\nRepo: %s|%s : %s : %.2f",
+                    logging.info("Repo: %s|%s : %s : %.2f",
                                  info['repo_dir'],
                                  remote.name, status.name, elapsed)
                     if info['fetch_status'] is None:

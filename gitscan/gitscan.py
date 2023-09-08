@@ -54,6 +54,7 @@ COLUMN_SCALE_FACTOR = 1.1
 ROW_SHADING_ALPHA = 100
 BAD_REPO_FLAG = 'bad_repo_flag'
 GRIDLINE_COLOUR = QColor(100, 100, 100, 100)
+VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'INFO']
 
 
 class StyleDelegate(QStyledItemDelegate):
@@ -730,15 +731,15 @@ class SettingsWindow(QDialog, Ui_Dialog):
         return 1 if self.exec_ok else 0
 
 
-def main():
+def main(log_level: str) -> None:
     """Application entry point."""
-    logging.basicConfig(format="%(message)s", level=logging.ERROR,
-                        datefmt="%H:%M:%S")
+    if log_level not in VALID_LOG_LEVELS:
+        raise ValueError(f"'{log_level}' is not a valid log level. "
+                         f"Use one of: {', '.join(VALID_LOG_LEVELS)}")
+    logging.basicConfig(format="%(message)s", level=log_level,
+                        datefmt="%H:%M:%S",
+                        handlers=[logging.StreamHandler(sys.stdout)])
     app = QApplication(sys.argv)
     win = MainWindow()
     win.show()
     sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
