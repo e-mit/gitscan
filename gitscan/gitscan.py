@@ -15,10 +15,11 @@ from PyQt6.QtWidgets import QMainWindow, QApplication, QMessageBox, QWidget
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 from PyQt6.QtWidgets import QDialog, QLineEdit, QInputDialog
 from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
-from PyQt6.QtCore import Qt, QModelIndex, QAbstractTableModel
+from PyQt6.QtCore import Qt, QModelIndex, QAbstractTableModel, QRectF
 from PyQt6.QtCore import QUrl, pyqtSignal, QObject, QThread, pyqtBoundSignal
-from PyQt6.QtGui import QFont, QColor, QIcon, QDesktopServices, QPainter
-from PyQt6.QtGui import QPen, QTextCursor, QPixmap
+from PyQt6.QtGui import QFont, QColor, QDesktopServices, QPainter
+from PyQt6.QtGui import QPen, QTextCursor
+from PyQt6.QtSvgWidgets import QSvgWidget
 
 from .gui.test_table import Ui_MainWindow
 from .gui.settings_dialog import Ui_Dialog
@@ -33,17 +34,17 @@ APP_SUBTITLE = "a git repository status viewer"
 APP_VERSION = "0.1.0"
 PROJECT_GITHUB_URL = "https://github.com/e-mit/gitscan"
 VIEW_COMMIT_COUNT = 3  # Show (at most) this many commits in the lower pane
-OPEN_FOLDER_COLUMN = 15
-OPEN_DIFFTOOL_COLUMN = OPEN_FOLDER_COLUMN + 1
-OPEN_TERMINAL_COLUMN = OPEN_FOLDER_COLUMN + 2
-OPEN_IDE_COLUMN = OPEN_FOLDER_COLUMN + 3
-REFRESH_COLUMN = OPEN_FOLDER_COLUMN + 4
-WARNING_COLUMN = OPEN_FOLDER_COLUMN + 5
+FOLDER_COLUMN = 15
+DIFFTOOL_COLUMN = FOLDER_COLUMN + 1
+TERMINAL_COLUMN = FOLDER_COLUMN + 2
+IDE_COLUMN = FOLDER_COLUMN + 3
+REFRESH_COLUMN = FOLDER_COLUMN + 4
+WARNING_COLUMN = FOLDER_COLUMN + 5
 TOTAL_COLUMNS = WARNING_COLUMN + 1
-OPEN_FOLDER_ICON = "resources/folder.svg"
-OPEN_DIFFTOOL_ICON = "resources/diff.svg"
-OPEN_TERMINAL_ICON = "resources/terminal.svg"
-OPEN_IDE_ICON = "resources/window.svg"
+FOLDER_ICON = "resources/folder.svg"
+DIFFTOOL_ICON = "resources/diff.svg"
+TERMINAL_ICON = "resources/terminal.svg"
+IDE_ICON = "resources/window.svg"
 WARNING_ICON = "resources/warning.svg"
 REFRESH_ICON = "resources/refresh.svg"
 ICON_SCALE_FACTOR = 0.7
@@ -51,6 +52,7 @@ ROW_SCALE_FACTOR = 1.5
 COLUMN_SCALE_FACTOR = 1.1
 ROW_SHADING_ALPHA = 100
 BAD_REPO_FLAG = 'bad_repo_flag'
+GRIDLINE_COLOUR = QColor(200, 200, 200, 100)
 
 
 class StyleDelegate(QStyledItemDelegate):
@@ -58,19 +60,19 @@ class StyleDelegate(QStyledItemDelegate):
 
     def __init__(self, model, *args, **kwargs):
         self.model = model
-        self.folder_icon = self._load_icon_from_resource(OPEN_FOLDER_ICON)
-        self.difftool_icon = self._load_icon_from_resource(OPEN_DIFFTOOL_ICON)
-        self.terminal_icon = self._load_icon_from_resource(OPEN_TERMINAL_ICON)
-        self.ide_icon = self._load_icon_from_resource(OPEN_IDE_ICON)
-        self.warn_icon = self._load_icon_from_resource(WARNING_ICON)
-        self.refresh_icon = self._load_icon_from_resource(REFRESH_ICON)
+        self.folder_icon = self._load_svg_from_resource(FOLDER_ICON)
+        self.difftool_icon = self._load_svg_from_resource(DIFFTOOL_ICON)
+        self.terminal_icon = self._load_svg_from_resource(TERMINAL_ICON)
+        self.ide_icon = self._load_svg_from_resource(IDE_ICON)
+        self.warn_icon = self._load_svg_from_resource(WARNING_ICON)
+        self.refresh_icon = self._load_svg_from_resource(REFRESH_ICON)
         super().__init__(*args, **kwargs)
 
-    def _load_icon_from_resource(self, resource_file: str) -> QIcon:
-        pix_map = QPixmap()
-        pix_map.loadFromData(
-            pkgutil.get_data(__name__, resource_file))  # type: ignore
-        return QIcon(pix_map)
+    def _load_svg_from_resource(self, resource_file: str) -> QSvgWidget:
+        svg = QSvgWidget()
+        svg.load(pkgutil.get_data(__name__, resource_file))  # type: ignore
+        svg.renderer().setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
+        return svg
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem,
               index: QModelIndex) -> None:
@@ -83,16 +85,16 @@ class StyleDelegate(QStyledItemDelegate):
                 and (index.column() != REFRESH_COLUMN)):
             return
         icon = None
-        if (index.column() == OPEN_FOLDER_COLUMN):
+        if (index.column() == FOLDER_COLUMN):
             icon = self.folder_icon
-        elif (index.column() == OPEN_DIFFTOOL_COLUMN):
+        elif (index.column() == DIFFTOOL_COLUMN):
             if ((not self.model.repo_data[index.row()]['bare']) and
                 (self.model.repo_data[index.row()]['working_tree_changes'] or
                  self.model.repo_data[index.row()]['commit_count'] > 1)):
                 icon = self.difftool_icon
-        elif (index.column() == OPEN_TERMINAL_COLUMN):
+        elif (index.column() == TERMINAL_COLUMN):
             icon = self.terminal_icon
-        elif (index.column() == OPEN_IDE_COLUMN):
+        elif (index.column() == IDE_COLUMN):
             icon = self.ide_icon
         elif (index.column() == REFRESH_COLUMN):
             icon = self.refresh_icon
@@ -101,16 +103,16 @@ class StyleDelegate(QStyledItemDelegate):
                 icon = self.warn_icon
 
         if icon is not None:
-            size = option.rect.size()
-            size.setHeight(int(size.height()*ICON_SCALE_FACTOR))
-            size.setWidth(int(size.width()*ICON_SCALE_FACTOR))
-            option.widget.style(
-                ).drawItemPixmap(painter, option.rect,
-                                 Qt.AlignmentFlag.AlignCenter,
-                                 icon.pixmap(size))
+            size = option.rect.toRectF().size()
+            size.scale(size.width()*ICON_SCALE_FACTOR,
+                       size.height()*ICON_SCALE_FACTOR,
+                       Qt.AspectRatioMode.KeepAspectRatio)
+            rect = QRectF(option.rect.toRectF().topLeft(), size)
+            rect.moveCenter(option.rect.toRectF().center())
+            icon.renderer().render(painter, rect)
 
         oldPen = painter.pen()
-        painter.setPen(QPen(QColor(200, 200, 200, 100), 1))
+        painter.setPen(QPen(GRIDLINE_COLOUR, 1))
         painter.drawLine(option.rect.topRight(), option.rect.bottomRight())
         painter.drawLine(option.rect.topLeft(), option.rect.bottomLeft())
         painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
@@ -139,7 +141,7 @@ class TableModel(QAbstractTableModel):
         elif role == Qt.ItemDataRole.BackgroundRole:
             return self.row_shading_colour(index)
         elif (role == Qt.ItemDataRole.TextAlignmentRole and
-              ((index.column() >= OPEN_FOLDER_COLUMN and
+              ((index.column() >= FOLDER_COLUMN and
                 index.column() <= WARNING_COLUMN) or
                (index.column() >= 2 and
                 index.column() <= 12))):
@@ -253,17 +255,17 @@ class TableModel(QAbstractTableModel):
             else:
                 data = arrow.get(last_commit_datetime).humanize().capitalize()
             tooltip = "Last commit on local branches"
-        elif (index.column() == OPEN_FOLDER_COLUMN):
+        elif (index.column() == FOLDER_COLUMN):
             tooltip = "Open directory"
-        elif (index.column() == OPEN_DIFFTOOL_COLUMN):
+        elif (index.column() == DIFFTOOL_COLUMN):
             if self.repo_data[index.row()]['working_tree_changes']:
                 tooltip = "View working tree in difftool"
             elif (self.repo_data[index.row()]['bare'] or
                   self.repo_data[index.row()]['commit_count'] > 1):
                 tooltip = "View last commit in difftool"
-        elif (index.column() == OPEN_TERMINAL_COLUMN):
+        elif (index.column() == TERMINAL_COLUMN):
             tooltip = "Open in terminal"
-        elif (index.column() == OPEN_IDE_COLUMN):
+        elif (index.column() == IDE_COLUMN):
             tooltip = "Open in IDE"
         elif (index.column() == REFRESH_COLUMN):
             tooltip = "Refresh"
@@ -373,10 +375,10 @@ class TableModel(QAbstractTableModel):
         if ((BAD_REPO_FLAG in self.repo_data[index.row()])
            and (index.column() != REFRESH_COLUMN)):
             return
-        if index.column() == OPEN_FOLDER_COLUMN:
+        if index.column() == FOLDER_COLUMN:
             QDesktopServices.openUrl(
                 QUrl(Path(self.repo_data[index.row()]['repo_dir']).as_uri()))
-        elif index.column() == OPEN_DIFFTOOL_COLUMN:
+        elif index.column() == DIFFTOOL_COLUMN:
             git_args = None
             if self.repo_data[index.row()]['bare']:
                 pass  # TODO: diff using last 2 commit hashes
@@ -388,11 +390,11 @@ class TableModel(QAbstractTableModel):
                 subprocess.Popen(git_args,  # nosec
                                  cwd=str(
                                      self.repo_data[index.row()]['repo_dir']))
-        elif index.column() == OPEN_TERMINAL_COLUMN:
+        elif index.column() == TERMINAL_COLUMN:
             subprocess.Popen(self.settings.terminal_command,  # nosec
                              shell=True,
                              cwd=str(self.repo_data[index.row()]['repo_dir']))
-        elif index.column() == OPEN_IDE_COLUMN:
+        elif index.column() == IDE_COLUMN:
             cmd = self.settings.ide_command + " ."
             subprocess.Popen(cmd, shell=True,  # nosec
                              cwd=str(self.repo_data[index.row()]['repo_dir']))
@@ -722,7 +724,7 @@ class SettingsWindow(QDialog, Ui_Dialog):
 
 def main():
     """Application entry point."""
-    logging.basicConfig(format="%(message)s", level=logging.INFO,
+    logging.basicConfig(format="%(message)s", level=logging.ERROR,
                         datefmt="%H:%M:%S")
     app = QApplication(sys.argv)
     win = MainWindow()
