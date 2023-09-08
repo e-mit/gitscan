@@ -21,7 +21,7 @@ class Platform(Enum):
 def get_platform() -> Platform:
     """Find the OS/platform, allowing either "linux" or "windows"."""
     if sys.platform.startswith('win32'):
-        return Platform.WINDOWS
+        raise NotImplementedError("Windows implementation is incomplete.")
     elif sys.platform.startswith('linux'):
         return Platform.LINUX
     else:
