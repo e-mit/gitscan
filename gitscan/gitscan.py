@@ -52,7 +52,7 @@ ROW_SCALE_FACTOR = 1.5
 COLUMN_SCALE_FACTOR = 1.1
 ROW_SHADING_ALPHA = 100
 BAD_REPO_FLAG = 'bad_repo_flag'
-GRIDLINE_COLOUR = QColor(200, 200, 200, 100)
+GRIDLINE_COLOUR = QColor(100, 100, 100, 100)
 
 
 class StyleDelegate(QStyledItemDelegate):
@@ -524,6 +524,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.splitter.setSizes([150, 100])
         self.tableView.horizontalHeader().setHighlightSections(False)
+        self.tableView.horizontalHeader().setStyleSheet(
+            "QHeaderView {"
+            "background-color: lightgrey;}")
         self._update_view()
 
     def _resize_rows_columns(self):
