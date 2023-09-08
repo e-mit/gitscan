@@ -55,8 +55,6 @@ ROW_SHADING_ALPHA = 100
 BAD_REPO_FLAG = 'bad_repo_flag'
 GRIDLINE_COLOUR = QColor(100, 100, 100, 100)
 
-logger = None
-
 
 class StyleDelegate(QStyledItemDelegate):
     """Custom delegate to insert icons with H and V centering."""
@@ -734,7 +732,6 @@ class SettingsWindow(QDialog, Ui_Dialog):
 
 def setup_logging(log_level: str):
     """Format the modular logger."""
-    global logger
     if log_level not in logging._nameToLevel.keys():
         raise ValueError(f"'{log_level}' is not a valid log level. "
                          "Use one of: "

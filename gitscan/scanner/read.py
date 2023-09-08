@@ -227,9 +227,15 @@ def read_repo(path_to_git: str | Path,
                                                 timeout_A_count,
                                                 timeout_B_count)
                     elapsed = time.time() - start
-                    logger.info("%s|%s : %s %.2f",
-                                info['repo_dir'],
-                                remote.name, status.name, elapsed)
+                    if status == FetchStatus.ERROR:
+                        log_func = logger.error
+                    elif status == FetchStatus.TIMEOUT:
+                        log_func = logger.warning
+                    else:
+                        log_func = logger.info
+                    log_func("%s|%s : fetch %s %.2f",
+                             info['repo_dir'],
+                             remote.name, status.name.lower(), elapsed)
                     if info['fetch_status'] is None:
                         info['fetch_status'] = status
                     else:
@@ -256,6 +262,8 @@ def read_repo(path_to_git: str | Path,
             info['warning'] = FETCH_TIMEOUT_WARNING
         repo.close()
     except Exception:
+        # Not unexpected, so do not log on high priority level:
+        logger.info("Routine exception with %s", path_to_git, exc_info=True)
         return None
     return info
 

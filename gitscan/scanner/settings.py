@@ -73,14 +73,17 @@ def load_settings(settings_dir: Path | str) -> tuple[None | dict[str, Any],
                   encoding="utf-8") as file:
             preferences = json.load(file)
         if not isinstance(preferences, dict):
+            logger.debug("Preferences file had bad contents.")
             preferences = None
     except (json.JSONDecodeError, FileNotFoundError):
+        logger.debug("Preferences file could not be loaded.")
         preferences = None
 
     try:
         with open(settings_dir / REPO_LIST_FILENAME, encoding="utf-8") as file:
             list_path_to_git = [x.rstrip() for x in file]
     except FileNotFoundError:
+        logger.debug("Repo list file did not exist.")
         list_path_to_git = None
 
     return (preferences, list_path_to_git)
@@ -89,6 +92,7 @@ def load_settings(settings_dir: Path | str) -> tuple[None | dict[str, Any],
 def save_preferences(settings_dir: Path | str,
                      preferences: dict[str, Any]) -> None:
     """Save preferences as json file."""
+    logger.debug("Saving preferences file.")
     with open(Path(settings_dir) / PREFERENCES_FILENAME,
               'w', encoding="utf-8") as file:
         json.dump(preferences, file)
@@ -99,6 +103,7 @@ def save_preferences(settings_dir: Path | str,
 def save_repo_list(settings_dir: Path | str,
                    list_path_to_git: list[str]) -> None:
     """Save list of repo paths to text file."""
+    logger.debug("Saving repo list file.")
     with open(Path(settings_dir) / REPO_LIST_FILENAME,
               'w', encoding="utf-8") as file:
         for line in list_path_to_git:
