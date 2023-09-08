@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import QAbstractItemView, QAbstractScrollArea
 from PyQt6.QtCore import Qt, QModelIndex, QAbstractTableModel, QRectF
 from PyQt6.QtCore import QUrl, pyqtSignal, QObject, QThread, pyqtBoundSignal
 from PyQt6.QtGui import QFont, QColor, QDesktopServices, QPainter
-from PyQt6.QtGui import QPen, QTextCursor
+from PyQt6.QtGui import QPen, QTextCursor, QPixmap, QIcon
 from PyQt6.QtSvgWidgets import QSvgWidget
 
 from .gui.test_table import Ui_MainWindow
@@ -44,9 +44,10 @@ TOTAL_COLUMNS = WARNING_COLUMN + 1
 FOLDER_ICON = "resources/folder.svg"
 DIFFTOOL_ICON = "resources/diff.svg"
 TERMINAL_ICON = "resources/terminal.svg"
-IDE_ICON = "resources/window.svg"
 WARNING_ICON = "resources/warning.svg"
+IDE_ICON = "resources/window.svg"
 REFRESH_ICON = "resources/refresh.svg"
+APP_ICON = "resources/G.png"
 ICON_SCALE_FACTOR = 0.7
 ROW_SCALE_FACTOR = 1.5
 COLUMN_SCALE_FACTOR = 1.1
@@ -494,6 +495,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.model = TableModel(self)
         self.tableView.setModel(self.model)
         self._connect_signals()
+        pix_map = QPixmap()
+        pix_map.loadFromData(
+            pkgutil.get_data(__name__, APP_ICON))  # type: ignore
+        self.setWindowIcon(QIcon(pix_map))
         self.tableView.setItemDelegate(StyleDelegate(self.model,
                                                      self.tableView))
 
