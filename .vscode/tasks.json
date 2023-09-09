@@ -29,7 +29,7 @@
       "label": "Run",
       "type": "shell",
       "command": "${command:python.interpreterPath}",
-      "args": ["gitscan"],
+      "args": ["-m", "gitscan"],
       "problemMatcher": [],
       "options": {"cwd": "${workspaceFolder}/.."},
       "presentation": {

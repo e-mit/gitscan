@@ -2,7 +2,7 @@
 import argparse
 import logging
 
-from gitscan import gitscan
+from .gitscan import gitscan
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
