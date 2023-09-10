@@ -242,7 +242,7 @@ class TableModel(QAbstractTableModel):
                 path_to_git)
         return d
 
-    def _refresh_complete(self, results):
+    def _refresh_complete(self, results: dict[str, Any]) -> None:
         if not self.cd.cancelled:
             repo_data = []
             for i, data in enumerate(results):
@@ -291,13 +291,13 @@ class TableModel(QAbstractTableModel):
                 git_args,  # nosec
                 cwd=str(self.repo_data[index.row()]['repo_dir']))
 
-    def table_clicked(self, index: QModelIndex):
+    def table_clicked(self, index: QModelIndex) -> None:
         """Launch processes when certain columns are clicked."""
         try:
             column = Column(index.column())
         except ValueError:
             # Column out of range
-            return ""
+            return
         if self.bad_data(index) and (column != Column.REFRESH):
             return
         if column == Column.OPEN_FOLDER:

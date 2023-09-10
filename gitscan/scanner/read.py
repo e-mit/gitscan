@@ -33,7 +33,7 @@ class FetchStatus(Flag):
     OK = auto()
 
 
-def _init_pool_stop_event(evt: MP_EVENT | None):
+def _init_pool_stop_event(evt: MP_EVENT | None) -> None:
     """Initialize the global event object which is read in read_repo()."""
     global _stop_event_global
     _stop_event_global = evt

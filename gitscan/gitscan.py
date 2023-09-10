@@ -1,4 +1,4 @@
-"""Main file for GUI app."""
+"""Main window for GUI app."""
 import sys
 from pathlib import Path
 import pkgutil
@@ -99,17 +99,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                          "background-color: black;"
                                          "color : white;}")
 
-    def _update_view(self):
+    def _update_view(self) -> None:
         self._resize_rows_columns()
         self._row_selection_shading()
         self._display_commit_text()
         self._resize_rows_columns()
 
-    def _update_selection(self):
+    def _update_selection(self) -> None:
         self._row_selection_shading()
         self._display_commit_text()
 
-    def _row_selection_shading(self):
+    def _row_selection_shading(self) -> None:
         """Change selection colour when selection changes."""
         index = self.tableView.selectionModel().currentIndex()
         c = self.model.row_shading_colour(index)
@@ -175,13 +175,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.model.settings.set_search_path(search_path_str)
             self._launch_search(search_path_str)
 
-    def _search_complete(self, repo_list):
+    def _search_complete(self, repo_list: list[str]) -> None:
         if not self.cd.cancelled:
             self.model.repo_data = []
             self.model.settings.set_repo_list(repo_list)
             self.model.refresh_all_data()
 
-    def _launch_search(self, search_path: str):
+    def _launch_search(self, search_path: str) -> None:
         """Show a dialog while doing repo search, allowing cancellation."""
         self.cd = dialogs.CancellableDialog(
                     workers.SearchWorker(search_path,
@@ -199,7 +199,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._resize_rows_columns()
 
 
-def setup_logging(log_level: str):
+def setup_logging(log_level: str) -> None:
     """Format the modular logger."""
     if log_level not in logging._nameToLevel.keys():
         raise ValueError(f"'{log_level}' is not a valid log level. "
