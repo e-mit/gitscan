@@ -21,7 +21,7 @@ from PyQt6.QtGui import QFont, QColor, QDesktopServices, QPainter
 from PyQt6.QtGui import QPen, QTextCursor, QPixmap, QIcon
 from PyQt6.QtSvgWidgets import QSvgWidget
 
-from .gui.test_table import Ui_MainWindow
+from .gui.main_window import Ui_MainWindow
 from .gui.settings_dialog import Ui_Dialog as SettingsDialog
 from .scanner import search, read, settings
 from .scanner.settings import AppSettings
