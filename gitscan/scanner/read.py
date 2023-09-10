@@ -1,4 +1,4 @@
-"""Extract information from git repos."""
+"""Extract information from git repositories."""
 from pathlib import Path
 from typing import Any, Sequence
 import subprocess
@@ -21,6 +21,7 @@ FETCH_FAILED_WARNING = "Fetch failed"
 FETCH_TIMEOUT_WARNING = "Fetch timed-out"
 
 logger = logging.getLogger(__name__)
+_stop_event_global = None
 
 
 class FetchStatus(Flag):
@@ -32,13 +33,10 @@ class FetchStatus(Flag):
     OK = auto()
 
 
-stop_event_global = None
-
-
-def init_pool_stop_event(evt: MP_EVENT | None):
+def _init_pool_stop_event(evt: MP_EVENT | None):
     """Initialize the global event object which is read in read_repo()."""
-    global stop_event_global
-    stop_event_global = evt
+    global _stop_event_global
+    _stop_event_global = evt
 
 
 def read_repo_parallel(paths_to_git: Sequence[Path | str],
@@ -57,7 +55,7 @@ def read_repo_parallel(paths_to_git: Sequence[Path | str],
                     poll_period_s=poll_period_s,
                     timeout_A_count=timeout_A_count,
                     timeout_B_count=timeout_B_count)
-    with mp.Pool(processes=pool_size, initializer=init_pool_stop_event,
+    with mp.Pool(processes=pool_size, initializer=_init_pool_stop_event,
                  initargs=(stop_event,)) as p:
         results = p.map(pfunc, paths_to_git)
     return results
@@ -152,7 +150,7 @@ def read_repo(path_to_git: str | Path,
 
     see extract_repo_name() for path_to_git definition.
     """
-    if (stop_event_global is not None) and stop_event_global.is_set():
+    if (_stop_event_global is not None) and _stop_event_global.is_set():
         return None
     try:
         repo = Repo(path_to_git)
@@ -215,14 +213,14 @@ def read_repo(path_to_git: str | Path,
         if not repo.bare and info['branch_count']:
             if fetch_remotes:
                 for remote in repo.remotes:
-                    if (stop_event_global is not None and
-                            stop_event_global.is_set()):
+                    if (_stop_event_global is not None and
+                            _stop_event_global.is_set()):
                         return None
                     start = time.time()
                     status = git_fetch_with_timeout(
                                                 info['repo_dir'],
                                                 remote.name,
-                                                stop_event_global,
+                                                _stop_event_global,
                                                 poll_period_s,
                                                 timeout_A_count,
                                                 timeout_B_count)

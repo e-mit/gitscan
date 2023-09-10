@@ -28,7 +28,8 @@ def get_platform() -> Platform:
     elif sys.platform.startswith('linux'):
         return Platform.LINUX
     else:
-        raise NotImplementedError(f"{sys.platform} not supported")
+        raise NotImplementedError(f"Platform '{sys.platform}' is "
+                                  "not supported")
 
 
 def get_settings_directory() -> Path:
@@ -178,7 +179,7 @@ class AppSettings:
         self.search_path = search_path
         self._save_preferences()
 
-    def set(self, new_preferences: dict[str, str | bool]) -> None:
+    def set_preferences(self, new_preferences: dict[str, str | bool]) -> None:
         """Check, then apply and save, new preferences."""
         if self._validate_and_set_preferences(new_preferences):
             self._save_preferences()

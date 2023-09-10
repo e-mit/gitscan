@@ -12,7 +12,7 @@ def find_git_repos(start_dir: str | Path,
                    stop_event: Event | None = None) -> list[str]:
     """Search for repos in all directories inside start_dir.
 
-    Can be stopped early with a threading event. Full paths listed 
+    Can be stopped early with a threading event. Full paths listed
     in exclude_dirs (and all their descendants) are excluded.
     Git submodule directories are also excluded.
     """

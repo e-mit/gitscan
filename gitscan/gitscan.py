@@ -22,7 +22,7 @@ from PyQt6.QtGui import QPen, QTextCursor, QPixmap, QIcon
 from PyQt6.QtSvgWidgets import QSvgWidget
 
 from .gui.test_table import Ui_MainWindow
-from .gui.settings_dialog import Ui_Dialog
+from .gui.settings_dialog import Ui_Dialog as SettingsDialog
 from .scanner import search, read, settings
 from .scanner.settings import AppSettings
 
@@ -155,7 +155,7 @@ class TableModel(QAbstractTableModel):
         else:
             return "s"
 
-    def valid_index(self, index: QModelIndex) -> bool:
+    def _valid_index(self, index: QModelIndex) -> bool:
         """Determine if index is out of table range."""
         if index.row() < 0 or index.row() >= self.rowCount(None):
             return False
@@ -292,7 +292,7 @@ class TableModel(QAbstractTableModel):
 
     def row_shading_colour(self, index: QModelIndex) -> QColor:
         """Get row colour for the repo list to indicate status."""
-        if not self.valid_index(index):
+        if not self._valid_index(index):
             return QColor()
         if BAD_REPO_FLAG in self.repo_data[index.row()]:
             return QColor(0, 0, 0, ROW_SHADING_ALPHA)
@@ -311,7 +311,7 @@ class TableModel(QAbstractTableModel):
 
     def get_commit_html(self, index: QModelIndex) -> str:
         """Provide a formatted view of the most recent commits."""
-        if ((not self.valid_index(index))
+        if ((not self._valid_index(index))
            or (BAD_REPO_FLAG in self.repo_data[index.row()])):
             return ""
         commit_data = read.read_commits(self.settings.repo_list[index.row()],
@@ -530,8 +530,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.splitter.setSizes([150, 100])
         self.tableView.horizontalHeader().setHighlightSections(False)
         self.tableView.horizontalHeader().setStyleSheet(
-            "QHeaderView {"
-            "background-color: lightgrey;}")
+                                    "QHeaderView {"
+                                    "background-color: lightgrey;}")
         self._update_view()
 
     def _resize_rows_columns(self):
@@ -635,7 +635,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             Qt.InputMethodHint.ImhNone)
         if ok and Path(search_path_str).is_dir():
             self.model.settings.set_search_path(search_path_str)
-            self.launch_search(search_path_str)
+            self._launch_search(search_path_str)
 
     def _search_complete(self, repo_list):
         if not self.cd.cancelled:
@@ -643,7 +643,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.model.settings.set_repo_list(repo_list)
             self.model.refresh_all_data()
 
-    def launch_search(self, search_path: str):
+    def _launch_search(self, search_path: str):
         """Show a dialog while doing repo search, allowing cancellation."""
         self.cd = CancellableDialog(
                     SearchWorker(search_path,
@@ -657,7 +657,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         settings_ui.exec()
         (ok, new_settings) = settings_ui.get_inputs()
         if ok:
-            self.model.settings.set(new_settings)
+            self.model.settings.set_preferences(new_settings)
         self._resize_rows_columns()
 
 
@@ -697,7 +697,7 @@ class CancellableDialog:
         self.box.show()
 
 
-class SettingsWindow(QDialog, Ui_Dialog):
+class SettingsWindow(QDialog, SettingsDialog):
     """Allow user to view and/or choose application settings via a GUI."""
 
     def __init__(self, existing_settings: AppSettings) -> None:
