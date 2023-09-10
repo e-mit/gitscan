@@ -15,7 +15,6 @@ WARNING_ICON = "../resources/warning.svg"
 IDE_ICON = "../resources/window.svg"
 REFRESH_ICON = "../resources/refresh.svg"
 ICON_SCALE_FACTOR = 0.7  # Relative to table cell size
-BAD_REPO_FLAG = 'bad_repo_flag'
 GRIDLINE_COLOUR = QColor(100, 100, 100, 100)
 
 
@@ -49,25 +48,24 @@ class StyleDelegate(QStyledItemDelegate):
         except ValueError:
             # Column out of range
             return
-        if ((BAD_REPO_FLAG in self.model.repo_data[index.row()])
-                and (column != Column.WARNING)
-                and (column != Column.REFRESH)):
+        if (self.model.bad_data(index) and column != Column.WARNING
+           and column != Column.REFRESH):
             return
         icon = None
-        if (column == Column.OPEN_FOLDER):
+        if column == Column.OPEN_FOLDER:
             icon = self.folder_icon
-        elif (column == Column.OPEN_DIFFTOOL):
+        elif column == Column.OPEN_DIFFTOOL:
             if ((not self.model.repo_data[index.row()]['bare']) and
                 (self.model.repo_data[index.row()]['working_tree_changes'] or
                  self.model.repo_data[index.row()]['commit_count'] > 1)):
                 icon = self.difftool_icon
-        elif (column == Column.OPEN_TERMINAL):
+        elif column == Column.OPEN_TERMINAL:
             icon = self.terminal_icon
-        elif (column == Column.OPEN_IDE):
+        elif column == Column.OPEN_IDE:
             icon = self.ide_icon
-        elif (column == Column.REFRESH):
+        elif column == Column.REFRESH:
             icon = self.refresh_icon
-        elif (column == Column.WARNING):
+        elif column == Column.WARNING:
             if self.model.repo_data[index.row()]['warning'] is not None:
                 icon = self.warn_icon
 

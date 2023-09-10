@@ -1,4 +1,4 @@
-"""Define the table column order for table data display."""
+"""Define the table columns for table data display."""
 from enum import Enum, auto
 
 
@@ -31,20 +31,20 @@ class Column(Enum):
     WARNING = auto()
 
 
-left_align = [Column.FOLDER, Column.REPO_NAME,
-              Column.BRANCH_NAME, Column.LAST_COMMIT]
+left_align = (Column.FOLDER, Column.REPO_NAME,
+              Column.BRANCH_NAME, Column.LAST_COMMIT)
 
-column_text = {}  # [Title, tooltip]
-column_text[Column.FOLDER] = ["Parent directory", "Parent directory"]
-column_text[Column.REPO_NAME] = ["Name", "Repository name"]
-column_text[Column.UNTRACKED] = ["U", "Untracked file(s)"]
-column_text[Column.MODIFIED] = ["M", "Modified file(s)"]
-column_text[Column.BARE] = ["B", "Bare/mirror repository"]
-column_text[Column.STASH] = ["S", "At least one stash"]
-column_text[Column.INDEX] = ["I", "Index has changes"]
-column_text[Column.AHEAD] = ["▲", "Local branches ahead of remotes"]
-column_text[Column.BEHIND] = ["▼", "Local branches behind remotes"]
-column_text[Column.TAGS] = ["T", "Tag(s)"]
-column_text[Column.SUBMODULES] = ["⦾", "Submodule(s)"]
-column_text[Column.REMOTES] = ["R", "Remote(s)"]
-column_text[Column.BRANCHES] = ["L", "Local branch(es)"]
+column_text = {}  # (column_title, tooltip)
+column_text[Column.FOLDER] = ("Parent directory", "Parent directory")
+column_text[Column.REPO_NAME] = ("Name", "Repository name")
+column_text[Column.UNTRACKED] = ("U", "Untracked file(s)")
+column_text[Column.MODIFIED] = ("M", "Modified file(s)")
+column_text[Column.BARE] = ("B", "Bare/mirror repository")
+column_text[Column.STASH] = ("S", "At least one stash")
+column_text[Column.INDEX] = ("I", "Index has changes")
+column_text[Column.AHEAD] = ("▲", "Local branches ahead of remotes")
+column_text[Column.BEHIND] = ("▼", "Local branches behind remotes")
+column_text[Column.TAGS] = ("T", "Tag(s)")
+column_text[Column.SUBMODULES] = ("⦾", "Submodule(s)")
+column_text[Column.REMOTES] = ("R", "Remote(s)")
+column_text[Column.BRANCHES] = ("L", "Local branch(es)")

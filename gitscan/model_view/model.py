@@ -16,7 +16,7 @@ from .columns import Column
 
 VIEW_COMMIT_COUNT = 3  # Show (at most) this many commits in the lower pane
 ROW_SHADING_ALPHA = 100
-BAD_REPO_FLAG = 'bad_repo_flag'
+BAD_DATA_WARNING = "Could not load repository"
 
 
 class TableModel(QAbstractTableModel):
@@ -27,8 +27,7 @@ class TableModel(QAbstractTableModel):
         self.repo_data: list[dict[str, Any]] = []
         self.settings = settings.AppSettings()
         self.parentWidget = parent
-        self.bad_data_entry = {BAD_REPO_FLAG: True,
-                               'warning': "Could not load repository"}
+        self._bad_data_entry = 'bad_data'
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
@@ -51,6 +50,10 @@ class TableModel(QAbstractTableModel):
     def _add_s_if_plural(count: int) -> str:
         return "" if count == 1 else "s"
 
+    def bad_data(self, index: QModelIndex) -> bool:
+        """Identify repositores which could not be read correctly."""
+        return self._bad_data_entry in self.repo_data[index.row()]
+
     def _valid_index(self, index: QModelIndex) -> bool:
         """Determine if index is out of table range."""
         if index.row() < 0 or index.row() >= self.rowCount(None):
@@ -66,7 +69,7 @@ class TableModel(QAbstractTableModel):
         except ValueError:
             # Column out of range
             return ""
-        if (BAD_REPO_FLAG in self.repo_data[index.row()]
+        if (self.bad_data(index)
             and (column not in [Column.FOLDER, Column.REPO_NAME,
                                 Column.REFRESH, Column.WARNING])):
             return ""
@@ -195,7 +198,7 @@ class TableModel(QAbstractTableModel):
         """Get row colour for the repo list to indicate status."""
         if not self._valid_index(index):
             return QColor()
-        if BAD_REPO_FLAG in self.repo_data[index.row()]:
+        if self.bad_data(index):
             return QColor(0, 0, 0, ROW_SHADING_ALPHA)
         elif ((self.repo_data[index.row()]['untracked_count'] > 0)
                 or self.repo_data[index.row()]['working_tree_changes']
@@ -212,8 +215,7 @@ class TableModel(QAbstractTableModel):
 
     def get_commit_html(self, index: QModelIndex) -> str:
         """Provide a formatted view of the most recent commits."""
-        if ((not self._valid_index(index))
-           or (BAD_REPO_FLAG in self.repo_data[index.row()])):
+        if (not self._valid_index(index)) or self.bad_data(index):
             return ""
         commit_data = read.read_commits(self.settings.repo_list[index.row()],
                                         VIEW_COMMIT_COUNT)
@@ -232,16 +234,21 @@ class TableModel(QAbstractTableModel):
             )
         return summary
 
+    def _label_bad_data(self, path_to_git: str | Path) -> dict[str, Any]:
+        d = {}
+        d[self._bad_data_entry] = True
+        d['warning'] = BAD_DATA_WARNING
+        (d['name'], _, d['containing_dir']) = read.extract_repo_name(
+                path_to_git)
+        return d
+
     def _refresh_complete(self, results):
         if not self.cd.cancelled:
             repo_data = []
             for i, data in enumerate(results):
                 if data is None:
-                    d = dict(self.bad_data_entry)
-                    (d['name'], _,
-                     d['containing_dir']) = read.extract_repo_name(
-                         self.settings.repo_list[i])
-                    repo_data.append(d)
+                    repo_data.append(self._label_bad_data(
+                        self.settings.repo_list[i]))
                 else:
                     repo_data.append(data)
             self.repo_data = repo_data
@@ -264,11 +271,8 @@ class TableModel(QAbstractTableModel):
         if data is not None:
             self.repo_data[index.row()] = data
         else:
-            d = dict(self.bad_data_entry)
-            (d['name'], _,
-             d['containing_dir']) = read.extract_repo_name(
-                    self.settings.repo_list[index.row()])
-            self.repo_data[index.row()] = d
+            self.repo_data[index.row()] = self._label_bad_data(
+                self.settings.repo_list[index.row()])
         self.dataChanged.emit(self.createIndex(index.row(), 0),
                               self.createIndex(index.row(),
                                                len(Column) - 1))
@@ -294,8 +298,7 @@ class TableModel(QAbstractTableModel):
         except ValueError:
             # Column out of range
             return ""
-        if ((BAD_REPO_FLAG in self.repo_data[index.row()])
-           and (column != Column.REFRESH)):
+        if self.bad_data(index) and (column != Column.REFRESH):
             return
         if column == Column.OPEN_FOLDER:
             QDesktopServices.openUrl(
