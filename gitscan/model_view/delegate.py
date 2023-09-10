@@ -1,4 +1,4 @@
-"""Main file for GUI app."""
+"""Custom delegate to insert SVG icons and format the gridlines."""
 import pkgutil
 
 from PyQt6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
@@ -6,26 +6,21 @@ from PyQt6.QtCore import Qt, QModelIndex, QRectF
 from PyQt6.QtGui import QPen, QColor, QPainter
 from PyQt6.QtSvgWidgets import QSvgWidget
 
-FOLDER_COLUMN = 15
-DIFFTOOL_COLUMN = FOLDER_COLUMN + 1
-TERMINAL_COLUMN = FOLDER_COLUMN + 2
-IDE_COLUMN = FOLDER_COLUMN + 3
-REFRESH_COLUMN = FOLDER_COLUMN + 4
-WARNING_COLUMN = FOLDER_COLUMN + 5
-TOTAL_COLUMNS = WARNING_COLUMN + 1
+from .columns import Column
+
 FOLDER_ICON = "../resources/folder.svg"
 DIFFTOOL_ICON = "../resources/diff.svg"
 TERMINAL_ICON = "../resources/terminal.svg"
 WARNING_ICON = "../resources/warning.svg"
 IDE_ICON = "../resources/window.svg"
 REFRESH_ICON = "../resources/refresh.svg"
-ICON_SCALE_FACTOR = 0.7
+ICON_SCALE_FACTOR = 0.7  # Relative to table cell size
 BAD_REPO_FLAG = 'bad_repo_flag'
 GRIDLINE_COLOUR = QColor(100, 100, 100, 100)
 
 
 class StyleDelegate(QStyledItemDelegate):
-    """Custom delegate to insert icons with H and V centering."""
+    """Custom delegate to insert SVG icons and format the gridlines."""
 
     def __init__(self, model, *args, **kwargs):
         self.model = model
@@ -45,29 +40,34 @@ class StyleDelegate(QStyledItemDelegate):
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem,
               index: QModelIndex) -> None:
-        """Override default delegate paint method for icons and border."""
+        """Override default delegate paint method for icons and gridlines."""
         super().paint(painter, option, index)
         if not self.model.repo_data:
             return
+        try:
+            column = Column(index.column())
+        except ValueError:
+            # Column out of range
+            return
         if ((BAD_REPO_FLAG in self.model.repo_data[index.row()])
-                and (index.column() != WARNING_COLUMN)
-                and (index.column() != REFRESH_COLUMN)):
+                and (column != Column.WARNING)
+                and (column != Column.REFRESH)):
             return
         icon = None
-        if (index.column() == FOLDER_COLUMN):
+        if (column == Column.OPEN_FOLDER):
             icon = self.folder_icon
-        elif (index.column() == DIFFTOOL_COLUMN):
+        elif (column == Column.OPEN_DIFFTOOL):
             if ((not self.model.repo_data[index.row()]['bare']) and
                 (self.model.repo_data[index.row()]['working_tree_changes'] or
                  self.model.repo_data[index.row()]['commit_count'] > 1)):
                 icon = self.difftool_icon
-        elif (index.column() == TERMINAL_COLUMN):
+        elif (column == Column.OPEN_TERMINAL):
             icon = self.terminal_icon
-        elif (index.column() == IDE_COLUMN):
+        elif (column == Column.OPEN_IDE):
             icon = self.ide_icon
-        elif (index.column() == REFRESH_COLUMN):
+        elif (column == Column.REFRESH):
             icon = self.refresh_icon
-        elif (index.column() == WARNING_COLUMN):
+        elif (column == Column.WARNING):
             if self.model.repo_data[index.row()]['warning'] is not None:
                 icon = self.warn_icon
 
@@ -85,4 +85,5 @@ class StyleDelegate(QStyledItemDelegate):
         painter.drawLine(option.rect.topRight(), option.rect.bottomRight())
         painter.drawLine(option.rect.topLeft(), option.rect.bottomLeft())
         painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
+        painter.drawLine(option.rect.topLeft(), option.rect.topRight())
         painter.setPen(oldPen)

@@ -225,9 +225,8 @@ def read_repo(path_to_git: str | Path,
                                                 timeout_A_count,
                                                 timeout_B_count)
                     elapsed = time.time() - start
-                    if status == FetchStatus.ERROR:
-                        log_func = logger.error
-                    elif status == FetchStatus.TIMEOUT:
+                    if (status == FetchStatus.ERROR
+                       or status == FetchStatus.TIMEOUT):
                         log_func = logger.warning
                     else:
                         log_func = logger.info

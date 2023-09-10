@@ -21,7 +21,6 @@ PROJECT_GITHUB_URL = "https://github.com/e-mit/gitscan"
 APP_ICON = "resources/G.png"
 ROW_SCALE_FACTOR = 1.5
 COLUMN_SCALE_FACTOR = 1.1
-BAD_REPO_FLAG = 'bad_repo_flag'
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):

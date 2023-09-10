@@ -11,16 +11,10 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QColor, QDesktopServices
 
 from ..scanner import read, settings
-from . import dialogs, workers
+from . import dialogs, workers, columns
+from .columns import Column
 
 VIEW_COMMIT_COUNT = 3  # Show (at most) this many commits in the lower pane
-FOLDER_COLUMN = 15
-DIFFTOOL_COLUMN = FOLDER_COLUMN + 1
-TERMINAL_COLUMN = FOLDER_COLUMN + 2
-IDE_COLUMN = FOLDER_COLUMN + 3
-REFRESH_COLUMN = FOLDER_COLUMN + 4
-WARNING_COLUMN = FOLDER_COLUMN + 5
-TOTAL_COLUMNS = WARNING_COLUMN + 1
 ROW_SHADING_ALPHA = 100
 BAD_REPO_FLAG = 'bad_repo_flag'
 
@@ -40,25 +34,22 @@ class TableModel(QAbstractTableModel):
         """Part of the Qt model interface."""
         if not self.repo_data:
             return
-        elif role == Qt.ItemDataRole.DisplayRole:
-            return self._display_data(index, Qt.ItemDataRole.DisplayRole)
-        elif role == Qt.ItemDataRole.ToolTipRole:
-            return self._display_data(index, Qt.ItemDataRole.ToolTipRole)
+        elif (role == Qt.ItemDataRole.DisplayRole
+              or role == Qt.ItemDataRole.ToolTipRole):
+            return self._display_data(index, role)
         elif role == Qt.ItemDataRole.BackgroundRole:
             return self.row_shading_colour(index)
-        elif (role == Qt.ItemDataRole.TextAlignmentRole and
-              ((index.column() >= FOLDER_COLUMN and
-                index.column() <= WARNING_COLUMN) or
-               (index.column() >= 2 and
-                index.column() <= 12))):
-            return Qt.AlignmentFlag.AlignCenter
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            if Column(index.column()) in columns.left_align:
+                return (Qt.AlignmentFlag.AlignLeft
+                        | Qt.AlignmentFlag.AlignVCenter)
+            else:
+                return (Qt.AlignmentFlag.AlignCenter
+                        | Qt.AlignmentFlag.AlignVCenter)
 
     @staticmethod
     def _add_s_if_plural(count: int) -> str:
-        if count == 1:
-            return ""
-        else:
-            return "s"
+        return "" if count == 1 else "s"
 
     def _valid_index(self, index: QModelIndex) -> bool:
         """Determine if index is out of table range."""
@@ -70,73 +61,78 @@ class TableModel(QAbstractTableModel):
 
     def _display_data(self, index: QModelIndex,
                       role: Qt.ItemDataRole) -> str:
+        try:
+            column = Column(index.column())
+        except ValueError:
+            # Column out of range
+            return ""
         if (BAD_REPO_FLAG in self.repo_data[index.row()]
-            and (index.column() not in
-                 [0, 1, REFRESH_COLUMN, WARNING_COLUMN])):
+            and (column not in [Column.FOLDER, Column.REPO_NAME,
+                                Column.REFRESH, Column.WARNING])):
             return ""
         data = " "
         tooltip = ""
-        if (index.column() == 0):
+        if (column == Column.FOLDER):
             data = str(self.repo_data[index.row()]['containing_dir'])
             tooltip = "Parent directory"
-        elif (index.column() == 1):
+        elif (column == Column.REPO_NAME):
             data = self.repo_data[index.row()]['name']
             tooltip = "Repository name"
-        elif (index.column() == 2):
+        elif (column == Column.UNTRACKED):
             untracked_count = self.repo_data[index.row()]['untracked_count']
             if untracked_count > 0:
                 data = "U"
                 tooltip = (str(untracked_count) + " untracked file"
                            + self._add_s_if_plural(untracked_count))
-        elif (index.column() == 3):
+        elif (column == Column.MODIFIED):
             if self.repo_data[index.row()]['working_tree_changes']:
                 data = "M"
                 tooltip = "Modified working tree"
-        elif (index.column() == 4):
+        elif (column == Column.BARE):
             if self.repo_data[index.row()]['bare']:
                 data = "B"
                 tooltip = "Bare/mirror repository"
-        elif (index.column() == 5):
+        elif (column == Column.STASH):
             if self.repo_data[index.row()]['stash']:
                 data = "S"
                 tooltip = "At least one stash"
-        elif (index.column() == 6):
+        elif (column == Column.INDEX):
             if self.repo_data[index.row()]['index_changes']:
                 data = "I"
                 tooltip = "Uncommitted index change(s)"
-        elif (index.column() == 7):
+        elif (column == Column.AHEAD):
             count = self.repo_data[index.row()]['ahead_count']
             if count > 0:
                 data = "▲"
                 tooltip = ("Local branches are ahead of remotes by "
                            f"{count} commit" + self._add_s_if_plural(count))
-        elif (index.column() == 8):
+        elif (column == Column.BEHIND):
             count = self.repo_data[index.row()]['behind_count']
             if count > 0:
                 data = "▼"
                 tooltip = ("Local branches are behind remotes by "
                            f"{count} commit" + self._add_s_if_plural(count))
-        elif (index.column() == 9):
+        elif (column == Column.TAGS):
             tag_count = self.repo_data[index.row()]['tag_count']
             if tag_count > 0:
                 data = "T"
                 tooltip = (str(tag_count) + " tag"
                            + self._add_s_if_plural(tag_count))
-        elif (index.column() == 10):
+        elif (column == Column.SUBMODULES):
             submodule_count = len(self.repo_data[index.row()]['submodule_names'])
             if submodule_count > 0:
                 data = str(submodule_count)
                 tooltip = (str(submodule_count) + " submodule"
                            + self._add_s_if_plural(submodule_count) + ": "
                     + ", ".join(self.repo_data[index.row()]['submodule_names']))
-        elif (index.column() == 11):
+        elif (column == Column.REMOTES):
             remote_count = self.repo_data[index.row()]['remote_count']
             if remote_count > 0:
                 tooltip = (str(remote_count) + " remote"
                            + self._add_s_if_plural(remote_count) + ": "
                            + ", ".join(self.repo_data[index.row()]['remote_names']))
                 data = str(remote_count)
-        elif (index.column() == 12):
+        elif (column == Column.BRANCHES):
             branch_count = self.repo_data[index.row()]['branch_count']
             data = str(branch_count)
             if branch_count == 0:
@@ -146,7 +142,7 @@ class TableModel(QAbstractTableModel):
                 tooltip += "branch" if (branch_count == 1) else "branches"
                 tooltip += (": "
                     + ", ".join(self.repo_data[index.row()]['branch_names']))
-        elif (index.column() == 13):
+        elif (column == Column.BRANCH_NAME):
             data = self.repo_data[index.row()]['branch_name']
             if self.repo_data[index.row()]['detached_head']:
                 tooltip = "Detached HEAD state"
@@ -154,28 +150,28 @@ class TableModel(QAbstractTableModel):
                 tooltip = "No local branches"
             else:
                 tooltip = "Active branch"
-        elif (index.column() == 14):
+        elif (column == Column.LAST_COMMIT):
             last_commit_datetime = self.repo_data[index.row()]['last_commit_datetime']
             if last_commit_datetime is None:
                 data = "-"
             else:
                 data = arrow.get(last_commit_datetime).humanize().capitalize()
             tooltip = "Last commit on local branches"
-        elif (index.column() == FOLDER_COLUMN):
+        elif (column == Column.OPEN_FOLDER):
             tooltip = "Open directory"
-        elif (index.column() == DIFFTOOL_COLUMN):
+        elif (column == Column.OPEN_DIFFTOOL):
             if self.repo_data[index.row()]['working_tree_changes']:
                 tooltip = "View working tree in difftool"
             elif (self.repo_data[index.row()]['bare'] or
                   self.repo_data[index.row()]['commit_count'] > 1):
                 tooltip = "View last commit in difftool"
-        elif (index.column() == TERMINAL_COLUMN):
+        elif (column == Column.OPEN_TERMINAL):
             tooltip = "Open in terminal"
-        elif (index.column() == IDE_COLUMN):
+        elif (column == Column.OPEN_IDE):
             tooltip = "Open in IDE"
-        elif (index.column() == REFRESH_COLUMN):
+        elif (column == Column.REFRESH):
             tooltip = "Refresh"
-        elif (index.column() == WARNING_COLUMN):
+        elif (column == Column.WARNING):
             if self.repo_data[index.row()]['warning'] is not None:
                 tooltip = self.repo_data[index.row()]['warning']
             else:
@@ -193,7 +189,7 @@ class TableModel(QAbstractTableModel):
 
     def columnCount(self, index: QModelIndex) -> int:
         """Part of the Qt model interface."""
-        return TOTAL_COLUMNS
+        return len(columns.Column)
 
     def row_shading_colour(self, index: QModelIndex) -> QColor:
         """Get row colour for the repo list to indicate status."""
@@ -275,60 +271,67 @@ class TableModel(QAbstractTableModel):
             self.repo_data[index.row()] = d
         self.dataChanged.emit(self.createIndex(index.row(), 0),
                               self.createIndex(index.row(),
-                                               TOTAL_COLUMNS - 1))
+                                               len(Column) - 1))
         QApplication.restoreOverrideCursor()
+
+    def _launch_git_diff(self, index: QModelIndex) -> None:
+        git_args = None
+        if self.repo_data[index.row()]['bare']:
+            pass  # TODO: diff using last 2 commit hashes
+        elif self.repo_data[index.row()]['working_tree_changes']:
+            git_args = ["git", "difftool", "--dir-diff"]
+        elif (self.repo_data[index.row()]['commit_count'] > 1):
+            git_args = ["git", "difftool", "--dir-diff", "HEAD~1..HEAD"]
+        if git_args is not None:
+            subprocess.Popen(
+                git_args,  # nosec
+                cwd=str(self.repo_data[index.row()]['repo_dir']))
 
     def table_clicked(self, index: QModelIndex):
         """Launch processes when certain columns are clicked."""
+        try:
+            column = Column(index.column())
+        except ValueError:
+            # Column out of range
+            return ""
         if ((BAD_REPO_FLAG in self.repo_data[index.row()])
-           and (index.column() != REFRESH_COLUMN)):
+           and (column != Column.REFRESH)):
             return
-        if index.column() == FOLDER_COLUMN:
+        if column == Column.OPEN_FOLDER:
             QDesktopServices.openUrl(
                 QUrl(Path(self.repo_data[index.row()]['repo_dir']).as_uri()))
-        elif index.column() == DIFFTOOL_COLUMN:
-            git_args = None
-            if self.repo_data[index.row()]['bare']:
-                pass  # TODO: diff using last 2 commit hashes
-            elif self.repo_data[index.row()]['working_tree_changes']:
-                git_args = ["git", "difftool", "--dir-diff"]
-            elif (self.repo_data[index.row()]['commit_count'] > 1):
-                git_args = ["git", "difftool", "--dir-diff", "HEAD~1..HEAD"]
-            if git_args is not None:
-                subprocess.Popen(git_args,  # nosec
-                                 cwd=str(
-                                     self.repo_data[index.row()]['repo_dir']))
-        elif index.column() == TERMINAL_COLUMN:
+        elif column == Column.OPEN_DIFFTOOL:
+            self._launch_git_diff(index)
+        elif column == Column.OPEN_TERMINAL:
             subprocess.Popen(self.settings.terminal_command,  # nosec
                              shell=True,
                              cwd=str(self.repo_data[index.row()]['repo_dir']))
-        elif index.column() == IDE_COLUMN:
+        elif column == Column.OPEN_IDE:
             cmd = self.settings.ide_command + " ."
             subprocess.Popen(cmd, shell=True,  # nosec
                              cwd=str(self.repo_data[index.row()]['repo_dir']))
-        elif index.column() == REFRESH_COLUMN:
+        elif column == Column.REFRESH:
             self.refresh_row(index)
 
     def headerData(self, section: int, orient: Qt.Orientation,
                    role: Qt.ItemDataRole) -> Any:
-        """Part of the Qt model interface."""
-        col_titles = ["Parent directory", "Name", "U", "M", "B",
-                      "S", "I", "▲", "▼", "T", "⦾", "R", "L"]
-        col_tooltips = ["Parent directory", "Repository name",
-                        "Untracked file(s)", "Modified file(s)",
-                        "Bare/mirror repository", "At least one stash",
-                        "Index has changes", "Local branches ahead of remotes",
-                        "Local branches behind remotes", "Tag(s)",
-                        "Submodule(s)", "Remote(s)", "Local branch(es)"]
-        left_align = [True, True]
-        if (role == Qt.ItemDataRole.DisplayRole and
-                orient == Qt.Orientation.Horizontal):
-            if section < len(col_titles):
-                return col_titles[section]
-        elif (role == Qt.ItemDataRole.ToolTipRole and
-                orient == Qt.Orientation.Horizontal):
-            if section < len(col_titles):
-                return col_tooltips[section]
+        """Provide data for column headers (standard Qt model interface)."""
+        if orient != Qt.Orientation.Horizontal:
+            return
+        try:
+            column = Column(section)
+        except ValueError:
+            # Column out of range
+            return
+        if column in columns.column_text:
+            title = columns.column_text[column][0]
+            tooltip = columns.column_text[column][1]
+        else:
+            return
+        if role == Qt.ItemDataRole.DisplayRole:
+            return title
+        elif role == Qt.ItemDataRole.ToolTipRole:
+            return tooltip
         elif (role == Qt.ItemDataRole.TextAlignmentRole):
-            if section < len(left_align) and left_align[section]:
+            if column in columns.left_align:
                 return Qt.AlignmentFlag.AlignLeft
