@@ -21,7 +21,7 @@ def find_git_repos(start_dir: str | Path,
         if (stop_event is not None) and stop_event.is_set():
             break
         root_path = Path(root)
-        dirs[:] = [x for x in dirs if (root_path/x) not in exclude_dirs
+        dirs[:] = [x for x in dirs if (root_path / x) not in exclude_dirs
                    and not ((x == "modules") and (root_path.stem == ".git"))]
         if "HEAD" in files and "refs" in dirs and "objects" in dirs:
             list_path_to_git.append(root)

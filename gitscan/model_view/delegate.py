@@ -55,9 +55,9 @@ class StyleDelegate(QStyledItemDelegate):
         if column == Column.OPEN_FOLDER:
             icon = self.folder_icon
         elif column == Column.OPEN_DIFFTOOL:
-            if ((not self.model.repo_data[index.row()]['bare']) and
-                (self.model.repo_data[index.row()]['working_tree_changes'] or
-                 self.model.repo_data[index.row()]['commit_count'] > 1)):
+            if ((not self.model.repo_data[index.row()]['bare'])
+                and (self.model.repo_data[index.row()]['working_tree_changes']
+                     or self.model.repo_data[index.row()]['commit_count'] > 1)):
                 icon = self.difftool_icon
         elif column == Column.OPEN_TERMINAL:
             icon = self.terminal_icon
@@ -71,8 +71,8 @@ class StyleDelegate(QStyledItemDelegate):
 
         if icon is not None:
             size = option.rect.toRectF().size()
-            size.scale(size.width()*ICON_SCALE_FACTOR,
-                       size.height()*ICON_SCALE_FACTOR,
+            size.scale(size.width() * ICON_SCALE_FACTOR,
+                       size.height() * ICON_SCALE_FACTOR,
                        Qt.AspectRatioMode.KeepAspectRatio)
             rect = QRectF(option.rect.toRectF().topLeft(), size)
             rect.moveCenter(option.rect.toRectF().center())

@@ -165,8 +165,8 @@ class TableModel(QAbstractTableModel):
         elif (column == Column.OPEN_DIFFTOOL):
             if self.repo_data[index.row()]['working_tree_changes']:
                 tooltip = "View working tree in difftool"
-            elif (self.repo_data[index.row()]['bare'] or
-                  self.repo_data[index.row()]['commit_count'] > 1):
+            elif (self.repo_data[index.row()]['bare']
+                  or self.repo_data[index.row()]['commit_count'] > 1):
                 tooltip = "View last commit in difftool"
         elif (column == Column.OPEN_TERMINAL):
             tooltip = "Open in terminal"
@@ -186,11 +186,11 @@ class TableModel(QAbstractTableModel):
         else:
             raise ValueError("Only supports Display and Tooltip roles.")
 
-    def rowCount(self, index: QModelIndex) -> int:
+    def rowCount(self, index: QModelIndex | None) -> int:
         """Part of the Qt model interface."""
         return len(self.repo_data)
 
-    def columnCount(self, index: QModelIndex) -> int:
+    def columnCount(self, index: QModelIndex | None) -> int:
         """Part of the Qt model interface."""
         return len(columns.Column)
 
@@ -235,32 +235,32 @@ class TableModel(QAbstractTableModel):
         return summary
 
     def _label_bad_data(self, path_to_git: str | Path) -> dict[str, Any]:
-        d = {}
+        d: dict[str, Any] = {}
         d[self._bad_data_entry] = True
         d['warning'] = BAD_DATA_WARNING
         (d['name'], _, d['containing_dir']) = read.extract_repo_name(
-                path_to_git)
+            path_to_git)
         return d
 
     def _refresh_complete(self, results: dict[str, Any]) -> None:
         if not self.cd.cancelled:
-            repo_data = []
+            repo_data: list[dict[str, Any]] = []
             for i, data in enumerate(results):
                 if data is None:
                     repo_data.append(self._label_bad_data(
                         self.settings.repo_list[i]))
                 else:
-                    repo_data.append(data)
+                    repo_data.append(data)  # type: ignore
             self.repo_data = repo_data
             self.layoutChanged.emit()
 
     def refresh_all_data(self) -> None:
         """Re-read all listed repos and store the data."""
         self.cd = dialogs.CancellableDialog(
-                    workers.ReadWorker(self.settings.repo_list,
-                                       self.settings.fetch_remotes),
-                    self._refresh_complete,
-                    self.parentWidget)
+            workers.ReadWorker(self.settings.repo_list,
+                               self.settings.fetch_remotes),
+            self._refresh_complete,
+            self.parentWidget)
         self.cd.launch("Updating", "Repo update in progress...")
 
     def refresh_row(self, index: QModelIndex) -> None:

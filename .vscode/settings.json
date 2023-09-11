@@ -9,5 +9,7 @@
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "github.gitAuthentication": false,
-    "git.terminalAuthentication": false
+    "git.terminalAuthentication": false,
+    "flake8.args": ["--ignore=D107,D203,D213,W503"],
+    "python.linting.pydocstyleArgs": ["--ignore=D107,D203,D213"]
 }

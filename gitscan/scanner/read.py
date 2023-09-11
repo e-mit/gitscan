@@ -109,7 +109,7 @@ def git_fetch_with_timeout(git_directory: Path | str,
             p.kill()
         # Wait for the process to end: this is
         # needed to avoid a ResourceWarning
-        proc.wait(timeout_A_count*poll_period_s)
+        proc.wait(timeout_A_count * poll_period_s)
         if stop:
             return FetchStatus.CANCEL
         else:
@@ -213,17 +213,17 @@ def read_repo(path_to_git: str | Path,
         if not repo.bare and info['branch_count']:
             if fetch_remotes:
                 for remote in repo.remotes:
-                    if (_stop_event_global is not None and
-                            _stop_event_global.is_set()):
+                    if (_stop_event_global is not None
+                            and _stop_event_global.is_set()):
                         return None
                     start = time.time()
                     status = git_fetch_with_timeout(
-                                                info['repo_dir'],
-                                                remote.name,
-                                                _stop_event_global,
-                                                poll_period_s,
-                                                timeout_A_count,
-                                                timeout_B_count)
+                        info['repo_dir'],
+                        remote.name,
+                        _stop_event_global,
+                        poll_period_s,
+                        timeout_A_count,
+                        timeout_B_count)
                     elapsed = time.time() - start
                     if (status == FetchStatus.ERROR
                        or status == FetchStatus.TIMEOUT):
@@ -242,12 +242,12 @@ def read_repo(path_to_git: str | Path,
                 if (branch.tracking_branch() is not None
                         and branch.tracking_branch() in repo.refs):
                     info['ahead_count'] += sum(1 for _ in repo.iter_commits(
-                                f"{branch.tracking_branch()}..{branch}"))
+                        f"{branch.tracking_branch()}..{branch}"))
                     info['behind_count'] += sum(1 for _ in repo.iter_commits(
-                                f"{branch}..{branch.tracking_branch()}"))
+                        f"{branch}..{branch.tracking_branch()}"))
 
-        info['up_to_date'] = ((info['behind_count'] == 0) and
-                              (info['ahead_count'] == 0))
+        info['up_to_date'] = ((info['behind_count'] == 0)
+                              and (info['ahead_count'] == 0))
         info['warning'] = None
         if (not fetch_remotes and info['remote_count'] > 0):
             info['warning'] = UNFETCHED_REMOTE_WARNING

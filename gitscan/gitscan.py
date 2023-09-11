@@ -69,8 +69,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.splitter.setSizes([150, 100])
         self.tableView.horizontalHeader().setHighlightSections(False)
         self.tableView.horizontalHeader().setStyleSheet(
-                                    "QHeaderView {"
-                                    "background-color: lightgrey;}")
+            "QHeaderView {"
+            "background-color: lightgrey;}")
         self._update_view()
 
     def _resize_rows_columns(self):
@@ -184,9 +184,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _launch_search(self, search_path: str) -> None:
         """Show a dialog while doing repo search, allowing cancellation."""
         self.cd = dialogs.CancellableDialog(
-                    workers.SearchWorker(search_path,
-                                         self.model.settings.exclude_dirs),
-                    self._search_complete, self)
+            workers.SearchWorker(search_path,
+                                 self.model.settings.exclude_dirs),
+            self._search_complete, self)
         self.cd.launch("Search", "Search in progress...")
 
     def _run_settings_dialog(self) -> None:
