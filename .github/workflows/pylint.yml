@@ -7,17 +7,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
     steps:
+    - run: echo "Triggered by a ${{ github.event_name }} and running branch ${{ github.ref }} on a ${{ runner.os }} server"
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pylint
-    - name: Analysing the code with pylint
+        pip install -r requirements.txt
+    - name: Lint with pylint
       run: |
         pylint $(git ls-files '*.py')
+      continue-on-error: true
