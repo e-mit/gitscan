@@ -1,6 +1,6 @@
 # Gitscan: a git repository status viewer
 
-![example workflow](https://github.com/e-mit/gitscan/actions/workflows/lint.yml/badge.svg)
+![example workflow](https://github.com/e-mit/gitscan/actions/workflows/pylint.yml/badge.svg)
 
 <p align="center"><img src="screenshot.png?raw=true"/></p>
 
