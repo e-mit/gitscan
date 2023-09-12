@@ -1,8 +1,10 @@
 # Gitscan: a git repository status viewer
 
+![example workflow](https://github.com/e-mit/gitscan/actions/workflows/lint.yml/badge.svg)
+
 <p align="center"><img src="screenshot.png?raw=true"/></p>
 
-Gitscan is a desktop application for viewing the status of all git repositories on a computer.
+Gitscan is a desktop application for viewing the status of all git repositories on your computer.
 
 A concise table layout shows, for each repo, information such as:
 - The presence of untracked/modified files, or modified index
@@ -18,7 +20,7 @@ It uses Python and PyQt and is suitable for Linux systems (tested on Ubuntu 22.0
 
 ### Readme Contents
 
-- **[Installation and running](#installation-and-running)**<br>
+- **[Installation and running](#installation-dependencies-and-running)**<br>
 - **[First time setup](#first-time-setup)**<br>
 - **[How to use](#how-to-use)**<br>
 - **[Development](#development)**<br>
@@ -26,14 +28,15 @@ It uses Python and PyQt and is suitable for Linux systems (tested on Ubuntu 22.0
 - **[License](#license)**<br>
 
 
-## Installation and running
+## Installation, dependencies and running
 
-1. Clone this repository into a folder on your Python path
-2. Install dependencies with:
+1. Requires Python 3.11
+2. Clone this repository into a folder on your Python path
+3. Install dependencies with:
 ```
 pip install -r requirements.txt
 ```
-3. Run with:
+4. Run with:
 ```
 python -m gitscan
 ```
@@ -59,13 +62,13 @@ git config --global diff.tool <tool e.g. meld>
     - Open repo folder
     - Run a git diff with difftool: this shows uncommitted modifications, if any, or otherwise shows the last commit.
     - Open a terminal window in the repo folder (defaults to gnome-terminal).
-    - Open the project in an IDE (defaults to Microsoft Visual Studio Code).
+    - Open the folder in an IDE (defaults to Microsoft Visual Studio Code).
     - Refresh the repo data (including doing a git fetch, if not disabled in settings).
 - You can run a new search for repositories at any time. The resulting list will be saved for future sessions.
 
 ### Refresh
 
-- Refresh updates the repository data displayed in the application.
+- Refreshing updates the repository data displayed in the application.
     - Press F5 or use the Action menu to refresh all repositories.
     - Click the penultimate column to refresh a single repository.
 - By default, refresh includes executing a ```git fetch``` for each remote.
@@ -117,4 +120,4 @@ Changes, fixes and additions in each software release version are listed in the 
 
 ## License
 
-See the [LICENSE](LICENSE) file for software license rights and limitations (GNU GPL v3).
+See the [LICENSE](LICENSE) file for software license rights and limitations (AGPL-3.0).

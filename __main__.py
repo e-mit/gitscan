@@ -6,8 +6,6 @@ from .gitscan import gitscan
 
 DEFAULT_LOG_LEVEL = 'ERROR'
 
-__name__ = "hello"
-
 parser = argparse.ArgumentParser(prog="python -m " + gitscan.APP_TITLE.lower())
 help_message = ("Choose stdout logging level."
                 f" Default: {DEFAULT_LOG_LEVEL}."
