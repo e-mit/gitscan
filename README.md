@@ -6,6 +6,8 @@
 ![Flake8](https://github.com/e-mit/gitscan/actions/workflows/flake8.yml/badge.svg) 
 ![Bandit](https://github.com/e-mit/gitscan/actions/workflows/bandit.yml/badge.svg) 
 ![Pyright](https://github.com/e-mit/gitscan/actions/workflows/pyright.yml/badge.svg) 
+![Tests](https://github.com/e-mit/gitscan/actions/workflows/tests.yml/badge.svg) 
+![Test coverage](https://github.com/e-mit/gitscan/actions/workflows/coverage.yml/badge.svg) 
 
 <p align="center"><img src="screenshot.png?raw=true"/></p>
 
