@@ -312,12 +312,10 @@ class TableModel(QAbstractTableModel):
             self._launch_git_diff(index)
         elif column == Column.OPEN_TERMINAL:
             subprocess.Popen(self.settings.terminal_command,  # nosec
-                             shell=True,
                              cwd=str(self.repo_data[index.row()]['repo_dir']))
         elif column == Column.OPEN_IDE:
-            cmd = self.settings.ide_command + " ."
-            subprocess.Popen(cmd, shell=True,  # nosec
-                             cwd=str(self.repo_data[index.row()]['repo_dir']))
+            subprocess.Popen([self.settings.ide_command,  # nosec
+                              str(self.repo_data[index.row()]['repo_dir'])])
         elif column == Column.REFRESH:
             self.refresh_row(index)
 
