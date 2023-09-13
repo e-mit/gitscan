@@ -18,10 +18,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install pytest
         pip install pytest-cov
         pip install -r requirements.txt
     - name: Check test coverage
       run: |
-        target_coverage=80
-        coverage=$(pytest --cov=gitscan tests | awk '$1 == "TOTAL" {print $NF+0}')
-        exit $(( coverage < target_coverage ))
+        target_coverage_pc=80
+        #coverage_pc=$(pytest --cov=gitscan tests | awk '$1 == "TOTAL" {print $NF+0}')
+        coverage_pc=22
+        exit $(( coverage_pc < target_coverage_pc ))

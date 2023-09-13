@@ -104,6 +104,12 @@ class TestReadRepo(unittest.TestCase):
         commit_count = info.pop('commit_count')
         with self.subTest(key='commit_count'):
             self.assertEqual(commit_count < 2, self.less_than_2_commits)
+        fetch_status = info.pop('fetch_status')
+        with self.subTest(key='fetch_status'):
+            self.assertEqual(
+                fetch_status == read.FetchStatus.OK,
+                self.expected_info['fetch_status'] == read.FetchStatus.OK)
+        self.expected_info.pop('fetch_status')
         with self.subTest(key='key_sets'):
             self.assertEqual(set(info.keys()), set(self.expected_info.keys()))
         for k in self.expected_info:

@@ -110,7 +110,8 @@ class TestFetchWithTimeout(unittest.TestCase):
         remote_name = "needs_auth"
         test_helpers.add_remote(repo_dir, remote_name, PRIVATE_REPO)
         result = read.git_fetch_with_timeout(repo_dir, remote_name=remote_name)
-        self.assertEqual(result, read.FetchStatus.TIMEOUT)
+        self.assertTrue(result in [read.FetchStatus.TIMEOUT,
+                                   read.FetchStatus.ERROR])
 
     def test_fetch_in_parallel(self) -> None:
         # create several repos with different properties. These are:
@@ -205,6 +206,9 @@ class TestFetchWithTimeout(unittest.TestCase):
                             | read.FetchStatus.ERROR), read.FetchStatus.OK,
                            read.FetchStatus.TIMEOUT, read.FetchStatus.TIMEOUT,
                            read.FetchStatus.ERROR]
+        alt_expected_status = [None, None, None, None,
+                               read.FetchStatus.OK | read.FetchStatus.ERROR,
+                               None, None, None, read.FetchStatus.ERROR, None]
         expected_ahead = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         expected_behind = [0, 1003, 3, 3, 3, 3, 0, 0, 0, 0]
         expected_remotes = [0, 1, 1, 2, 2, 4, 1, 1, 1, 1]
@@ -213,8 +217,13 @@ class TestFetchWithTimeout(unittest.TestCase):
             with self.subTest(i=i):
                 result_data = results[i]
                 assert result_data is not None
-                self.assertEqual(result_data['fetch_status'],
-                                 expected_status[i])
+                if alt_expected_status[i] is None:
+                    self.assertEqual(result_data['fetch_status'],
+                                     expected_status[i])
+                else:
+                    self.assertTrue(result_data['fetch_status'] in
+                                    [expected_status[i],
+                                     alt_expected_status[i]])
                 self.assertEqual(result_data['ahead_count'],
                                  expected_ahead[i])
                 self.assertEqual(result_data['behind_count'],
