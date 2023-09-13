@@ -231,6 +231,19 @@ class TestFetchWithTimeout(unittest.TestCase):
                 self.assertEqual(result_data['remote_count'],
                                  expected_remotes[i])
 
+    def test_remote_unfetched(self) -> None:
+        (repo_dir, path_to_git) = test_helpers.create_git_repo(
+            self.temp_root_dir,
+            "origin_repo", 3,
+            ["dev"], 0, False,
+            "main", 0, False,
+            False, False)
+        test_helpers.add_remote(repo_dir, "origin", PRIVATE_REPO)
+        info = read.read_repo(path_to_git, fetch_remotes=False)
+        self.assertIsNotNone(info)
+        if info is not None:
+            self.assertEqual(info['warning'], read.UNFETCHED_REMOTE_WARNING)
+
     def tearDown(self) -> None:
         for d in self.dirs_to_delete:
             shutil.rmtree(d)

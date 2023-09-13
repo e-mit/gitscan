@@ -194,5 +194,10 @@ class TestReadRepoNoCommitsIndex(TestReadRepo):
     index_changes = True
 
 
+class TestReadCommits(unittest.TestCase):
+    def test_return_none(self) -> None:
+        self.assertIsNone(read.read_commits("/fake/directory/not_git", 3))
+
+
 if __name__ == '__main__':
     unittest.main()

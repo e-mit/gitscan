@@ -26,5 +26,6 @@ jobs:
         git config --global user.email "test@example.com"
         git config --global user.name "test"
         coverage run -m unittest discover tests
+        coverage report --omit=tests/*
         coverage_pc=$(coverage report --omit=tests/* | awk '$1 == "TOTAL" {print $NF+0}')
         exit $(( coverage_pc < target_coverage_pc ))
