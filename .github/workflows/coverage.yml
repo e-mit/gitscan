@@ -24,6 +24,5 @@ jobs:
     - name: Check test coverage
       run: |
         target_coverage_pc=80
-        #coverage_pc=$(pytest --cov=gitscan tests | awk '$1 == "TOTAL" {print $NF+0}')
-        coverage_pc=22
+        coverage_pc=$(pytest --cov=gitscan/scanner tests | awk '$1 == "TOTAL" {print $NF+0}')
         exit $(( coverage_pc < target_coverage_pc ))
