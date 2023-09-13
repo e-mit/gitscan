@@ -188,7 +188,7 @@ def read_repo(path_to_git: str | Path,
             info['stash'] = False
 
         last_commits = []
-        for branch in repo.branches:
+        for branch in repo.branches:  # type: ignore
             last_commits.append(
                 repo.iter_commits(branch).__next__().committed_datetime)
         info['last_commit_datetime'] = (None if not last_commits
@@ -232,15 +232,17 @@ def read_repo(path_to_git: str | Path,
                         log_func = logger.info
                     log_func("%s|%s : fetch %s %.2f",
                              info['repo_dir'],
-                             remote.name, status.name.lower(), elapsed)
+                             remote.name,
+                             status.name.lower(), elapsed)  # type: ignore
                     if info['fetch_status'] is None:
                         info['fetch_status'] = status
                     else:
                         info['fetch_status'] |= status
 
-            for branch in repo.branches:
+            for branch in repo.branches:  # type: ignore
                 if (branch.tracking_branch() is not None
-                        and branch.tracking_branch() in repo.refs):
+                        and branch.tracking_branch()  # type: ignore
+                        in repo.refs):
                     info['ahead_count'] += sum(1 for _ in repo.iter_commits(
                         f"{branch.tracking_branch()}..{branch}"))
                     info['behind_count'] += sum(1 for _ in repo.iter_commits(

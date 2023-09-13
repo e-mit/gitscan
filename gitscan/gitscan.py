@@ -81,7 +81,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             int(v_size * ROW_SCALE_FACTOR))
         self.tableView.horizontalHeader().setMinimumSectionSize(0)
         self.tableView.resizeColumnsToContents()
-        for col in range(self.model.columnCount(None)):
+        for col in range(self.model.columnCount()):
             self.tableView.horizontalHeader().resizeSection(
                 col,
                 int(self.tableView.horizontalHeader().sectionSize(col)

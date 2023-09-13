@@ -29,7 +29,8 @@ class TableModel(QAbstractTableModel):
         self.parentWidget = parent
         self._bad_data_entry = 'bad_data'
 
-    def data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Any:
+    def data(self, index: QModelIndex,  # type: ignore
+             role: Qt.ItemDataRole) -> Any:
         """Part of the Qt model interface."""
         if not self.repo_data:
             return
@@ -56,9 +57,9 @@ class TableModel(QAbstractTableModel):
 
     def _valid_index(self, index: QModelIndex) -> bool:
         """Determine if index is out of table range."""
-        if index.row() < 0 or index.row() >= self.rowCount(None):
+        if index.row() < 0 or index.row() >= self.rowCount():
             return False
-        if index.column() < 0 or index.column() >= self.columnCount(None):
+        if index.column() < 0 or index.column() >= self.columnCount():
             return False
         return True
 
@@ -190,11 +191,11 @@ class TableModel(QAbstractTableModel):
         else:
             raise ValueError("Only supports Display and Tooltip roles.")
 
-    def rowCount(self, index: QModelIndex | None) -> int:
+    def rowCount(self, index: QModelIndex = QModelIndex()) -> int:
         """Part of the Qt model interface."""
         return len(self.repo_data)
 
-    def columnCount(self, index: QModelIndex | None) -> int:
+    def columnCount(self, index: QModelIndex = QModelIndex()) -> int:
         """Part of the Qt model interface."""
         return len(columns.Column)
 
@@ -246,7 +247,7 @@ class TableModel(QAbstractTableModel):
             path_to_git)
         return d
 
-    def _refresh_complete(self, results: dict[str, Any]) -> None:
+    def _refresh_complete(self, results: list[dict[str, Any]]) -> None:
         if not self.cd.cancelled:
             repo_data: list[dict[str, Any]] = []
             for i, data in enumerate(results):
@@ -254,7 +255,7 @@ class TableModel(QAbstractTableModel):
                     repo_data.append(self._label_bad_data(
                         self.settings.repo_list[i]))
                 else:
-                    repo_data.append(data)  # type: ignore
+                    repo_data.append(data)
             self.repo_data = repo_data
             self.layoutChanged.emit()
 
@@ -320,7 +321,7 @@ class TableModel(QAbstractTableModel):
         elif column == Column.REFRESH:
             self.refresh_row(index)
 
-    def headerData(self, section: int, orient: Qt.Orientation,
+    def headerData(self, section: int, orient: Qt.Orientation,  # type:ignore
                    role: Qt.ItemDataRole) -> Any:
         """Provide data for column headers (standard Qt model interface)."""
         if orient != Qt.Orientation.Horizontal:
