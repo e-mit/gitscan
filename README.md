@@ -1,6 +1,11 @@
 # Gitscan: a git repository status viewer
 
-![example workflow](https://github.com/e-mit/gitscan/actions/workflows/pylint.yml/badge.svg)
+![Mypy](https://github.com/e-mit/gitscan/actions/workflows/mypy.yml/badge.svg) 
+![Pycodestyle](https://github.com/e-mit/gitscan/actions/workflows/pycodestyle.yml/badge.svg) 
+![Pydocstyle](https://github.com/e-mit/gitscan/actions/workflows/pydocstyle.yml/badge.svg) 
+![Flake8](https://github.com/e-mit/gitscan/actions/workflows/flake8.yml/badge.svg) 
+![Bandit](https://github.com/e-mit/gitscan/actions/workflows/bandit.yml/badge.svg) 
+![Pyright](https://github.com/e-mit/gitscan/actions/workflows/pyright.yml/badge.svg) 
 
 <p align="center"><img src="screenshot.png?raw=true"/></p>
 
