@@ -3,7 +3,7 @@ name: Pydocstyle
 on: [push, workflow_dispatch]
 
 jobs:
-  lint:
+  pydocstyle:
     runs-on: ubuntu-latest
     strategy:
       matrix:

@@ -3,7 +3,7 @@ name: Mypy
 on: [push, workflow_dispatch]
 
 jobs:
-  lint:
+  mypy:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -24,5 +24,8 @@ jobs:
     - name: Type check with mypy
       run: |
         echo $PWD
-        #export MYPYPATH=./gitscan
-        mypy -p gitscan
+        echo $HOME
+        ls -a
+        cd ..
+        ls -a
+        mypy -p gitscan --exclude '/tests/'

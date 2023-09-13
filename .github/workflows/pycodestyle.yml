@@ -3,7 +3,7 @@ name: Pycodestyle
 on: [push, workflow_dispatch]
 
 jobs:
-  lint:
+  pycodestyle:
     runs-on: ubuntu-latest
     strategy:
       matrix:
