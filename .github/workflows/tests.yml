@@ -3,7 +3,7 @@ name: Tests
 on: [push, workflow_dispatch]
 
 jobs:
-  coverage:
+  tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,10 +18,10 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest-cov
         pip install -r requirements.txt
     - name: Tests
       run: |
         git config --global user.email "test@example.com"
         git config --global user.name "test"
+        git config --global --unset credential.helper
         python -m unittest discover tests

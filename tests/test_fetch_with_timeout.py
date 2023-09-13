@@ -7,7 +7,7 @@ from gitscan.scanner import read
 from tests import test_helpers
 
 UNREACHABLE_REPO = "ssh://e@172.24.1.1:322/fake/repo.git"
-PRIVATE_REPO = "https://github.com/e-mit/test_auth"
+PRIVATE_REPO = "https://github.com/dvdvdvdv/dvdvdvdv"
 FAIL_REPO = "https://example.com/fake-repo"
 
 
