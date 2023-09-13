@@ -41,15 +41,15 @@ class TestReadRepo(unittest.TestCase):
         self.calculate_expected_commits()
         (self.containing_dir, self.repo_dir,
          self.path_to_git) = test_helpers.create_temp_git_repo(
-                                            self.repo_name,
-                                            self.commit_count,
-                                            self.extra_branches,
-                                            self.tag_count, self.stash,
-                                            self.active_branch,
-                                            self.untracked_count,
-                                            self.index_changes,
-                                            self.working_tree_changes,
-                                            self.detached_head)
+            self.repo_name,
+            self.commit_count,
+            self.extra_branches,
+            self.tag_count, self.stash,
+            self.active_branch,
+            self.untracked_count,
+            self.index_changes,
+            self.working_tree_changes,
+            self.detached_head)
         if self.detached_head:
             expected_branch_name = read.DETACHED_BRANCH_DISPLAY_NAME
         elif self.commit_count == 0:
@@ -74,16 +74,15 @@ class TestReadRepo(unittest.TestCase):
             'ahead_count': 0,
             'behind_count': 0,
             'fetch_status': None,
-            'submodule_names': []
-            }
+            'submodule_names': []}
 
     def tearDown(self) -> None:
         shutil.rmtree(self.containing_dir)
 
     def update_uptodate(self):
         self.expected_info['up_to_date'] = (
-                    self.expected_info['ahead_count'] == 0 and
-                    self.expected_info['behind_count'] == 0)
+            self.expected_info['ahead_count'] == 0
+            and self.expected_info['behind_count'] == 0)
 
     def test_read_repo(self) -> None:
         self.update_uptodate()
@@ -97,10 +96,10 @@ class TestReadRepo(unittest.TestCase):
             if (self.commit_count == 0):
                 self.assertIsNone(last_commit_datetime)
             else:
-                self.assertTrue(last_commit_datetime <
-                                datetime.now(ZoneInfo('UTC')))
-                self.assertTrue((datetime.now(ZoneInfo('UTC')) -
-                                last_commit_datetime).total_seconds()
+                self.assertTrue(last_commit_datetime
+                                < datetime.now(ZoneInfo('UTC')))
+                self.assertTrue((datetime.now(ZoneInfo('UTC'))
+                                - last_commit_datetime).total_seconds()
                                 < MAX_EXPECTED_TEST_COMMIT_AGE_S)
         commit_count = info.pop('commit_count')
         with self.subTest(key='commit_count'):

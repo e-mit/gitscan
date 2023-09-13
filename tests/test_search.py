@@ -33,10 +33,10 @@ def create_git_directory_tree(containing_dir: Path,
             dir_list.append(new_dir)
             os.mkdir(new_dir)
             (r_list, d_list) = create_git_directory_tree(
-                                                new_dir,
-                                                repo_count_range,
-                                                subdir_count_range,
-                                                recursion_depth_remaining)
+                new_dir,
+                repo_count_range,
+                subdir_count_range,
+                recursion_depth_remaining)
             repo_list.extend(r_list)
             dir_list.extend(d_list)
     return (repo_list, dir_list)
@@ -49,10 +49,10 @@ class TestFindGitRepos(unittest.TestCase):
         subdir_count_range = (1, 3)
         recursion_depth_remaining = 6
         (repo_list, self.actual_dir_list) = create_git_directory_tree(
-                                    self.temp_root_dir,
-                                    repo_count_range,
-                                    subdir_count_range,
-                                    recursion_depth_remaining)
+            self.temp_root_dir,
+            repo_count_range,
+            subdir_count_range,
+            recursion_depth_remaining)
         self.actual_repo_list = [str(x) for x in repo_list]
 
     def test_search(self) -> None:
@@ -65,7 +65,7 @@ class TestFindGitRepos(unittest.TestCase):
     def test_search_with_exclude(self) -> None:
         # Randomly choose 1/3 of the directories to exclude:
         exclude_dirs = sample(self.actual_dir_list,
-                              int(len(self.actual_dir_list)/3))
+                              int(len(self.actual_dir_list) / 3))
         expected_list = []
         for repo_dir in self.actual_repo_list:
             if not any(str(ex) in repo_dir for ex in exclude_dirs):

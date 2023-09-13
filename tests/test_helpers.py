@@ -200,14 +200,14 @@ def create_random_repo(containing_dir: Path) -> Path:
     working_tree_changes = random() < 0.5  # nosec
     detached_head = random() < 0.5  # nosec
     (_, path_to_git) = create_git_repo(
-                                    containing_dir,
-                                    repo_name,
-                                    commit_count,
-                                    extra_branches,
-                                    tag_count, stash,
-                                    active_branch,
-                                    untracked_count,
-                                    index_changes,
-                                    working_tree_changes,
-                                    detached_head)
+        containing_dir,
+        repo_name,
+        commit_count,
+        extra_branches,
+        tag_count, stash,
+        active_branch,
+        untracked_count,
+        index_changes,
+        working_tree_changes,
+        detached_head)
     return path_to_git

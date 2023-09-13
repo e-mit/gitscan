@@ -15,7 +15,7 @@ class TestReadBareRepo(TestReadRepo):
         bare_repo_name = "bare1"
         (self.containing_dir, self.repo_dir,
          self.path_to_git) = test_helpers.create_temp_clone_git_repo(
-                                self.repo_dir, bare_repo_name, bare=True)
+            self.repo_dir, bare_repo_name, bare=True)
         self.expected_info['name'] = bare_repo_name
         self.expected_info['containing_dir'] = self.containing_dir
         self.expected_info['repo_dir'] = self.repo_dir

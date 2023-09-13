@@ -20,7 +20,7 @@ class TestExtractRepoName(unittest.TestCase):
             with self.subTest(i=i):
                 (repo_name, repo_path,
                  containing_path) = read.extract_repo_name(
-                                        Path(self.git_dir[i]))
+                    Path(self.git_dir[i]))
                 self.assertEqual(repo_name, self.actual_repo_name[i])
                 self.assertEqual(repo_path, self.actual_repo_path[i])
                 self.assertEqual(containing_path,
@@ -31,7 +31,7 @@ class TestExtractRepoName(unittest.TestCase):
             with self.subTest(i=i):
                 (repo_name, repo_path,
                  containing_path) = read.extract_repo_name(
-                                                self.git_dir[i])
+                    self.git_dir[i])
                 self.assertEqual(repo_name, self.actual_repo_name[i])
                 self.assertEqual(repo_path, self.actual_repo_path[i])
                 self.assertEqual(containing_path,

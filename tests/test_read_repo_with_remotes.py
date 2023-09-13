@@ -32,9 +32,9 @@ class TestReadRepoWithRemotes(TestReadRepo):
             self.clone_repo_name = f"clone{clone_count}"
             (self.containing_dir, self.repo_dir,
              self.path_to_git) = test_helpers.create_temp_clone_git_repo(
-                                                          self.repo_dir,
-                                                          self.clone_repo_name,
-                                                          bare=False)
+                self.repo_dir,
+                self.clone_repo_name,
+                bare=False)
         # Set all repos as remotes of the final repo, and create a local
         # branch which tracks that remote's main. Do not do this for
         # the penultimate repo because it is already added (as 'origin')

@@ -122,18 +122,21 @@ class TableModel(QAbstractTableModel):
                 tooltip = (str(tag_count) + " tag"
                            + self._add_s_if_plural(tag_count))
         elif (column == Column.SUBMODULES):
-            submodule_count = len(self.repo_data[index.row()]['submodule_names'])
+            submodule_count = len(
+                self.repo_data[index.row()]['submodule_names'])
             if submodule_count > 0:
                 data = str(submodule_count)
                 tooltip = (str(submodule_count) + " submodule"
                            + self._add_s_if_plural(submodule_count) + ": "
-                    + ", ".join(self.repo_data[index.row()]['submodule_names']))
+                           + ", ".join(
+                               self.repo_data[index.row()]['submodule_names']))
         elif (column == Column.REMOTES):
             remote_count = self.repo_data[index.row()]['remote_count']
             if remote_count > 0:
                 tooltip = (str(remote_count) + " remote"
                            + self._add_s_if_plural(remote_count) + ": "
-                           + ", ".join(self.repo_data[index.row()]['remote_names']))
+                           + ", ".join(
+                               self.repo_data[index.row()]['remote_names']))
                 data = str(remote_count)
         elif (column == Column.BRANCHES):
             branch_count = self.repo_data[index.row()]['branch_count']
@@ -144,7 +147,8 @@ class TableModel(QAbstractTableModel):
                 tooltip = str(branch_count) + " local "
                 tooltip += "branch" if (branch_count == 1) else "branches"
                 tooltip += (": "
-                    + ", ".join(self.repo_data[index.row()]['branch_names']))
+                            + ", ".join(
+                                self.repo_data[index.row()]['branch_names']))
         elif (column == Column.BRANCH_NAME):
             data = self.repo_data[index.row()]['branch_name']
             if self.repo_data[index.row()]['detached_head']:
