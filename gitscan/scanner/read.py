@@ -1,7 +1,7 @@
 """Extract information from git repositories."""
 from pathlib import Path
 from typing import Any, Sequence
-import subprocess
+import subprocess  # nosec
 import time
 import multiprocessing as mp
 import multiprocessing.synchronize

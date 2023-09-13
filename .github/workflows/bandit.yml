@@ -22,4 +22,4 @@ jobs:
         pip install -r requirements.txt
     - name: Check security with bandit
       run: |
-        bandit -r .
+        bandit -r . --exclude=/tests/

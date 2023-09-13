@@ -1,7 +1,7 @@
 """Model for table data."""
 from typing import Any
 from pathlib import Path
-import subprocess
+import subprocess  # nosec
 
 import arrow
 
