@@ -22,4 +22,6 @@ jobs:
         pip install -r requirements.txt
     - name: Tests
       run: |
+        git config --global user.email "test@example.com"
+        git config --global user.name "test"
         python -m unittest discover tests
