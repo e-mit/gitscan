@@ -3,6 +3,7 @@ from typing import Any
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import shutil
+import warnings
 
 from gitscan.scanner import read
 from tests import test_helpers
@@ -38,6 +39,7 @@ class TestReadRepo(unittest.TestCase):
             self.total_commits -= self.commit_count - 1
 
     def setUp(self) -> None:
+        warnings.filterwarnings("ignore", category=ResourceWarning)
         self.calculate_expected_commits()
         (self.containing_dir, self.repo_dir,
          self.path_to_git) = test_helpers.create_temp_git_repo(

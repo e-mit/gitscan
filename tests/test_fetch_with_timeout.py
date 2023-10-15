@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 import shutil
 import tempfile
+import warnings
 
 from gitscan.scanner import read
 from tests import test_helpers
@@ -13,6 +14,7 @@ FAIL_REPO = "https://example.com/fake-repo"
 
 class TestFetchWithTimeout(unittest.TestCase):
     def setUp(self) -> None:
+        warnings.filterwarnings("ignore", category=ResourceWarning)
         self.temp_root_dir = Path(tempfile.mkdtemp())
         self.dirs_to_delete = [self.temp_root_dir]
 

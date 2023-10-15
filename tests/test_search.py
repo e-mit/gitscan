@@ -5,6 +5,7 @@ import shutil
 import os
 import uuid
 import tempfile
+import warnings
 
 from gitscan.scanner import search
 from tests import test_helpers
@@ -44,6 +45,7 @@ def create_git_directory_tree(containing_dir: Path,
 
 class TestFindGitRepos(unittest.TestCase):
     def setUp(self) -> None:
+        warnings.filterwarnings("ignore", category=ResourceWarning)
         self.temp_root_dir = Path(tempfile.mkdtemp())
         repo_count_range = (0, 3)
         subdir_count_range = (1, 3)
