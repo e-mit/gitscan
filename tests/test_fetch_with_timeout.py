@@ -216,7 +216,7 @@ class TestFetchWithTimeout(unittest.TestCase):
         for i in range(len(results)):
             with self.subTest(i=i):
                 result_data = results[i]
-                assert result_data is not None
+                assert result_data is not None  # nosec
                 if alt_expected_status[i] is None:
                     self.assertEqual(result_data['fetch_status'],
                                      expected_status[i])
