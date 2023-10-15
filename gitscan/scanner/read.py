@@ -72,6 +72,7 @@ def git_fetch_with_timeout(git_directory: Path | str,
 
     Returns a string description of the problem, or None if success.
     """
+    logger.debug("Attempting fetch on %s", remote_name)
     args = (['git', 'fetch'] if remote_name is None
             else ['git', 'fetch', remote_name])
     proc = subprocess.Popen(args,  # nosec
@@ -88,19 +89,28 @@ def git_fetch_with_timeout(git_directory: Path | str,
     while proc.poll() is None:
         processes = the_process.children(recursive=True)
         processes.append(the_process)
+        logger.debug("%s", [x.status() for x in processes])
         if any([x.status() in [psutil.STATUS_IDLE, psutil.STATUS_RUNNING]
                 for x in processes]):
+            logger.debug("Resetting B period")
             count_B = 0
         else:
             count_B += 1
         count_A += 1
-        if count_B >= timeout_B_count or count_A >= timeout_A_count:
+        if count_B >= timeout_B_count:
             timeout = True
+            logger.debug("TIMEOUT B (non-running timeout)")
+            break
+        if count_A >= timeout_A_count:
+            timeout = True
+            logger.debug("TIMEOUT A (overall timeout)")
             break
         if (stop_event is not None) and stop_event.is_set():
+            logger.debug("BREAK due to stop_event")
             stop = True
             break
         time.sleep(poll_period_s)
+    logger.debug("Exit poll loop")
 
     if timeout or stop:
         processes = the_process.children(recursive=True)
@@ -116,7 +126,10 @@ def git_fetch_with_timeout(git_directory: Path | str,
             return FetchStatus.TIMEOUT
     else:
         if proc.returncode != 0:
+            logger.debug("Fetch function error returncode: %s",
+                         proc.returncode)
             return FetchStatus.ERROR
+        logger.debug("Fetch function exit OK")
         return FetchStatus.OK
 
 
