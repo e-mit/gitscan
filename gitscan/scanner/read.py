@@ -21,7 +21,7 @@ FETCH_FAILED_WARNING = "Fetch failed"
 FETCH_TIMEOUT_WARNING = "Fetch timed-out"
 
 logger = logging.getLogger(__name__)
-_stop_event_global = None
+_stop_event_global: MP_EVENT | None = None
 
 
 class FetchStatus(Flag):
