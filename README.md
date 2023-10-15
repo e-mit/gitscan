@@ -89,12 +89,13 @@ git config --global diff.tool <tool e.g. meld>
 git config [--global] credential.helper 'cache --timeout=99999'
 git fetch  # then provide your credentials once only, per reboot
 ```
-- If git cannot authenticate: the program will show a warning for that repository and the information will be gathered from local data only.
+- If git cannot authenticate: the program will show a timeout warning for that repository and the information will be gathered from local data only.
 
 ### Warnings
 
 - The final column may show a warning symbol: more information is available in the mouseover tooltip.
-- Fetch failures/timeouts are normally due to lack of authentication, or no internet access.
+- Fetch failures/timeouts are normally due to lack of authentication, no internet access, or remote not found.
+- A warning is shown, and the row greyed-out, if the repository cannot be found on disk.
 
 ### Things to note
 
