@@ -5,6 +5,10 @@ from git import Repo  # type: ignore
 from random import random
 from random import randrange
 
+TEST_POLL_PERIOD_S = 0.1
+TEST_TIMEOUT_A_S = 20.0
+TEST_TIMEOUT_B_S = 3
+
 
 def make_path_to_git(containing_dir: Path | str, repo_name: str,
                      bare: bool) -> tuple[Path, Path]:

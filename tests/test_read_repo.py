@@ -88,7 +88,11 @@ class TestReadRepo(unittest.TestCase):
 
     def test_read_repo(self) -> None:
         self.update_uptodate()
-        info: None | dict[str, Any] = read.read_repo(self.path_to_git)
+        info: None | dict[str, Any] = read.read_repo(
+            self.path_to_git,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         if info is None:
             raise ValueError("Git repository was nonexistent or corrupt.")
         for pop_name in ['warning', 'branch_names', 'remote_names']:

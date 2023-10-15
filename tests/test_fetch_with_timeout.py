@@ -19,7 +19,11 @@ class TestFetchWithTimeout(unittest.TestCase):
         self.dirs_to_delete = [self.temp_root_dir]
 
     def test_not_a_git_repo(self) -> None:
-        result = read.git_fetch_with_timeout(self.temp_root_dir)
+        result = read.git_fetch_with_timeout(
+            self.temp_root_dir,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertEqual(result, read.FetchStatus.ERROR)
 
     def test_no_remotes(self) -> None:
@@ -31,11 +35,25 @@ class TestFetchWithTimeout(unittest.TestCase):
             [], 0, False,
             "main", 1, False,
             True, False)
-        result = read.git_fetch_with_timeout(repo_dir)
+        result = read.git_fetch_with_timeout(
+            repo_dir,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertEqual(result, read.FetchStatus.OK)
-        result = read.git_fetch_with_timeout(repo_dir, remote_name='origin')
+        result = read.git_fetch_with_timeout(
+            repo_dir,
+            remote_name='origin',
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertEqual(result, read.FetchStatus.ERROR)
-        result = read.git_fetch_with_timeout(repo_dir, remote_name='thename')
+        result = read.git_fetch_with_timeout(
+            repo_dir,
+            remote_name='thename',
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertEqual(result, read.FetchStatus.ERROR)
 
     def test_nothing_to_fetch(self) -> None:
@@ -51,7 +69,11 @@ class TestFetchWithTimeout(unittest.TestCase):
             "clone_repo",
             False)
         self.dirs_to_delete.append(containing_dir)
-        result = read.git_fetch_with_timeout(repo_dir)
+        result = read.git_fetch_with_timeout(
+            repo_dir,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertEqual(result, read.FetchStatus.OK)
 
     def test_successful_fetch(self) -> None:
@@ -68,7 +90,11 @@ class TestFetchWithTimeout(unittest.TestCase):
             False)
         self.dirs_to_delete.append(containing_dir)
         test_helpers.create_commits(origin_repo_dir, 3)
-        result = read.git_fetch_with_timeout(repo_dir)
+        result = read.git_fetch_with_timeout(
+            repo_dir,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertEqual(result, read.FetchStatus.OK)
 
     def test_successful_large_fetch(self) -> None:
@@ -85,7 +111,11 @@ class TestFetchWithTimeout(unittest.TestCase):
             False)
         self.dirs_to_delete.append(containing_dir)
         test_helpers.create_commits(origin_repo_dir, 1000)
-        result = read.git_fetch_with_timeout(repo_dir)
+        result = read.git_fetch_with_timeout(
+            repo_dir,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertEqual(result, read.FetchStatus.OK)
 
     def test_unreachable_remote(self) -> None:
@@ -98,7 +128,11 @@ class TestFetchWithTimeout(unittest.TestCase):
         # the following remote will cause the fetch command to
         # hang until SSH timeout
         test_helpers.add_remote(repo_dir, "origin", UNREACHABLE_REPO)
-        result = read.git_fetch_with_timeout(repo_dir)
+        result = read.git_fetch_with_timeout(
+            repo_dir,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertEqual(result, read.FetchStatus.TIMEOUT)
 
     def test_password_hang(self) -> None:
@@ -111,7 +145,12 @@ class TestFetchWithTimeout(unittest.TestCase):
         # the following remote requires a username and password
         remote_name = "needs_auth"
         test_helpers.add_remote(repo_dir, remote_name, PRIVATE_REPO)
-        result = read.git_fetch_with_timeout(repo_dir, remote_name=remote_name)
+        result = read.git_fetch_with_timeout(
+            repo_dir,
+            remote_name=remote_name,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertTrue(result in [read.FetchStatus.TIMEOUT,
                                    read.FetchStatus.ERROR])
 
@@ -214,7 +253,11 @@ class TestFetchWithTimeout(unittest.TestCase):
         expected_ahead = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         expected_behind = [0, 1003, 3, 3, 3, 3, 0, 0, 0, 0]
         expected_remotes = [0, 1, 1, 2, 2, 4, 1, 1, 1, 1]
-        results = read.read_repo_parallel(paths_to_git)
+        results = read.read_repo_parallel(
+            paths_to_git,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         for i in range(len(results)):
             with self.subTest(i=i):
                 result_data = results[i]
@@ -241,7 +284,12 @@ class TestFetchWithTimeout(unittest.TestCase):
             "main", 0, False,
             False, False)
         test_helpers.add_remote(repo_dir, "origin", PRIVATE_REPO)
-        info = read.read_repo(path_to_git, fetch_remotes=False)
+        info = read.read_repo(
+            path_to_git,
+            fetch_remotes=False,
+            poll_period_s=test_helpers.TEST_POLL_PERIOD_S,
+            timeout_A_s=test_helpers.TEST_TIMEOUT_A_S,
+            timeout_B_s=test_helpers.TEST_TIMEOUT_B_S)
         self.assertIsNotNone(info)
         if info is not None:
             self.assertEqual(info['warning'], read.UNFETCHED_REMOTE_WARNING)
