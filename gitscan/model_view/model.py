@@ -271,6 +271,7 @@ class TableModel(QAbstractTableModel):
     def refresh_row(self, index: QModelIndex) -> None:
         """Re-read one repo and update the data."""
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        read._stop_event_global = None
         data = read.read_repo(self.settings.repo_list[index.row()],
                               self.settings.fetch_remotes)
         if data is not None:
