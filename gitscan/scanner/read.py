@@ -43,9 +43,9 @@ def read_repo_parallel(paths_to_git: Sequence[Path | str],
                        fetch_remotes: bool = True,
                        stop_event: MP_EVENT | None = None,
                        pool_size: int | None = None,
-                       poll_period_s: float = 0.1,
+                       poll_period_s: float = 0.005,
                        timeout_A_s: float = 10.0,
-                       timeout_B_s: float = 1.2
+                       timeout_B_s: float = 1.5
                        ) -> list[None | dict[str, Any]]:
     """Run multiple repo readers from a process pool.
 
@@ -64,9 +64,9 @@ def read_repo_parallel(paths_to_git: Sequence[Path | str],
 def git_fetch_with_timeout(git_directory: Path | str,
                            remote_name: str | None = None,
                            stop_event: MP_EVENT | None = None,
-                           poll_period_s: float = 0.1,
+                           poll_period_s: float = 0.005,
                            timeout_A_s: float = 10.0,
-                           timeout_B_s: float = 1.2
+                           timeout_B_s: float = 1.5
                            ) -> FetchStatus:
     """Run git fetch in a subprocess and kill it if necessary.
 
@@ -86,11 +86,18 @@ def git_fetch_with_timeout(git_directory: Path | str,
     startA = time.time()
     startB = time.time()
     timeout = False
+    three_processes = False
     stop = False
     while proc.poll() is None:
         processes = the_process.children(recursive=True)
         processes.append(the_process)
         logger.debug("Proc %s : %s", pid_str, [x.status() for x in processes])
+        if not three_processes and (len(processes) >= 3):
+            # This is usually a sign that the fetch is proceeding successfully
+            logger.debug("Proc %s : 3 or more processes", pid_str)
+            three_processes = True
+            timeout_B_s = timeout_B_s * 2
+            timeout_A_s = timeout_A_s * 2
         if any([x.status() in [psutil.STATUS_IDLE, psutil.STATUS_RUNNING]
                 for x in processes]):
             logger.debug("Proc %s : Resetting B period", pid_str)
@@ -153,9 +160,9 @@ def extract_repo_name(path_to_git: str | Path) -> tuple[str, Path, Path]:
 
 def read_repo(path_to_git: str | Path,
               fetch_remotes: bool = True,
-              poll_period_s: float = 0.1,
+              poll_period_s: float = 0.005,
               timeout_A_s: float = 10.0,
-              timeout_B_s: float = 1.2
+              timeout_B_s: float = 1.5
               ) -> None | dict[str, Any]:
     """Extract basic information about the repo.
 
